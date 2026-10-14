@@ -1,0 +1,109 @@
+$chip-gap: 8px
+
+:host
+  --board-filter-surface: #eaf4fa
+  --board-filter-surface-strong: #e7f7f2
+  --board-filter-border: #b7d9df
+  --board-filter-text: #123047
+  --board-filter-primary: #0b6f7a
+  --board-filter-primary-hover: #0b5f73
+  --board-filter-accent: #0f766e
+  --board-filter-button-text: #ffffff
+  --board-filter-focus: rgba(15, 118, 110, 0.28)
+  --board-filter-shadow: rgba(11, 59, 90, 0.1)
+
+:host-context([data-color-mode='dark'])
+  --board-filter-surface: #102a33
+  --board-filter-surface-strong: #153842
+  --board-filter-border: #2a6770
+  --board-filter-text: #eaf7f5
+  --board-filter-primary: #2fb3a4
+  --board-filter-primary-hover: #54c8bb
+  --board-filter-accent: #6fd7c8
+  --board-filter-button-text: #062f33
+  --board-filter-focus: rgba(47, 179, 164, 0.35)
+  --board-filter-shadow: rgba(0, 0, 0, 0.26)
+
+.board-custom-filters
+  display: flex
+  flex: 0 0 auto
+  flex-wrap: wrap
+  align-items: center
+  gap: $chip-gap
+  margin: 0 8px 10px
+  padding: 10px 12px
+  border: 1px solid var(--board-filter-border)
+  border-radius: 8px
+  background: var(--board-filter-surface)
+  box-shadow: 0 6px 18px var(--board-filter-shadow)
+
+.board-custom-filters--item
+  display: inline-flex
+  max-width: min(100%, 320px)
+
+.board-custom-filters--chip.button,
+.board-custom-filters--delete.button
+  min-height: 34px
+  margin: 0
+  border-color: var(--board-filter-border)
+  background: var(--board-filter-surface-strong)
+  color: var(--board-filter-text)
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, box-shadow 150ms ease
+
+  &:focus-visible
+    position: relative
+    z-index: 1
+    box-shadow: 0 0 0 3px var(--board-filter-focus)
+    outline: 0
+
+.board-custom-filters--chip.button
+  min-width: 0
+  overflow: hidden
+  border-bottom-left-radius: 999px
+  border-bottom-right-radius: 0
+  border-top-left-radius: 999px
+  border-top-right-radius: 0
+  text-overflow: ellipsis
+  white-space: nowrap
+
+  &:hover
+    border-color: var(--board-filter-primary)
+    background: var(--board-filter-surface-strong)
+    color: var(--board-filter-primary-hover)
+
+  &.-active
+    border-color: var(--board-filter-primary)
+    background: var(--board-filter-primary)
+    color: var(--board-filter-button-text)
+    font-weight: 600
+
+    &:hover
+      border-color: var(--board-filter-primary-hover)
+      background: var(--board-filter-primary-hover)
+      color: var(--board-filter-button-text)
+
+.board-custom-filters--delete.button
+  flex: 0 0 36px
+  border-bottom-left-radius: 0
+  border-bottom-right-radius: 999px
+  border-left: 0
+  border-top-left-radius: 0
+  border-top-right-radius: 999px
+  color: var(--board-filter-accent)
+
+  &:hover:not(:disabled)
+    border-color: var(--board-filter-accent)
+    background: var(--board-filter-accent)
+    color: var(--board-filter-button-text)
+
+  &:disabled
+    cursor: wait
+    opacity: 0.55
+
+@media screen and (max-width: 680px)
+  .board-custom-filters
+    margin-inline: 4px
+    padding: 8px
+
+  .board-custom-filters--item
+    max-width: 100%

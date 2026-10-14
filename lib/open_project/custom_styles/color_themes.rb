@@ -61,7 +61,7 @@ module OpenProject::CustomStyles
           "main-menu-bg-color" => "#ECECEC",
           "main-menu-bg-selected-background" => "#A9A9A9",
         },
-        logo: "logo_openproject.png"
+        logo: OpenProject::CustomStyles::Design.logo_asset_path
       },
       {
         theme: "OpenProject Navy Blue",

@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -38,6 +37,7 @@ import { AddListModalComponent } from 'core-app/features/boards/board/add-list-m
 import { BoardHighlightingTabComponent } from 'core-app/features/boards/board/configuration-modal/tabs/highlighting-tab.component';
 import { AddCardDropdownMenuDirective } from 'core-app/features/boards/board/add-card-dropdown/add-card-dropdown-menu.directive';
 import { BoardFilterComponent } from 'core-app/features/boards/board/board-filter/board-filter.component';
+import { BoardCustomFiltersComponent } from 'core-app/features/boards/board/board-filter/board-custom-filters.component';
 import { BoardListMenuComponent } from 'core-app/features/boards/board/board-list/board-list-menu.component';
 import { VersionBoardHeaderComponent } from 'core-app/features/boards/board/board-actions/version/version-board-header.component';
 import { DynamicModule } from 'ng-dynamic-component';
@@ -77,6 +77,7 @@ import { OpenprojectEnterpriseModule } from 'core-app/features/enterprise/openpr
     AddCardDropdownMenuDirective,
     BoardListMenuComponent,
     BoardFilterComponent,
+    BoardCustomFiltersComponent,
     VersionBoardHeaderComponent,
     AssigneeBoardHeaderComponent,
     SubprojectBoardHeaderComponent,

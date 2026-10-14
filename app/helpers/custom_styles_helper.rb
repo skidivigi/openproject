@@ -31,6 +31,15 @@
 module CustomStylesHelper
   include TabsHelper
 
+  LEGACY_LOGO_ASSETS = %w[
+    logo_openproject.png
+    logo_openproject_white_big.png
+    logo-black-bg-ua.png
+    logo-white-bg-ua.png
+    bim/logo_openproject_bim_big.png
+    bim/logo_openproject_bim_big_coloured.png
+  ].freeze
+
   def pdf_tab?
     selected = selected_tab(design_tabs)
     selected && selected[:pdf]
@@ -208,25 +217,19 @@ module CustomStylesHelper
   end
 
   def default_logo_urls
-    desktop_light = asset_path(I18n.locale == :ru ? "logo-white-bg-ua.png" : "logo_openproject_white_big.png")
-    desktop_light_high_contrast = if OpenProject::Configuration.bim?
-                                    asset_path("bim/logo_openproject_bim_big_coloured.png")
-                                  else
-                                    asset_path(I18n.locale == :ru ? "logo-black-bg-ua.png" : "logo_openproject.png")
-                                  end
-    mobile_white = asset_path("icon_logo_white.svg")
+    logo = asset_path(OpenProject::CustomStyles::Design.logo_asset_path)
 
     {
       desktop: {
-        light: desktop_light,
-        light_high_contrast: desktop_light_high_contrast,
-        dark: desktop_light
+        light: logo,
+        light_high_contrast: logo,
+        dark: logo
       },
       mobile: {
-        light: asset_path("icon_logo.svg"),
-        white: mobile_white,
-        light_high_contrast: asset_path("icon_logo.svg"),
-        dark: mobile_white
+        light: logo,
+        white: logo,
+        light_high_contrast: logo,
+        dark: logo
       }
     }
   end
@@ -259,7 +262,7 @@ module CustomStylesHelper
     return if custom_style.theme_logo.blank?
 
     logo = custom_style.theme_logo
-    logo = "logo-black-bg-ua.png" if I18n.locale == :ru && logo == "logo_openproject.png"
+    logo = OpenProject::CustomStyles::Design.logo_asset_path if LEGACY_LOGO_ASSETS.include?(logo)
 
     asset_path(logo)
   end

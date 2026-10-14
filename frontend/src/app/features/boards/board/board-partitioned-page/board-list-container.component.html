@@ -1,4 +1,5 @@
 @if ((board$ | async); as board) {
+  <op-board-custom-filters [board]="board" />
   <div
     class="boards-list--container"
     [ngClass]="{ '-free' : board.isFree }"

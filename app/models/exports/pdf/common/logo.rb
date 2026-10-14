@@ -35,7 +35,7 @@ module Exports::PDF::Common::Logo
   end
 
   def logo_image_filename
-    custom_logo_image_filename || Rails.root.join("app/assets/images/logo_openproject.png")
+    custom_logo_image_filename || Rails.root.join("app/assets/images", OpenProject::CustomStyles::Design.logo_asset_path)
   end
 
   def custom_logo_image_filename # rubocop:disable Metrics/AbcSize

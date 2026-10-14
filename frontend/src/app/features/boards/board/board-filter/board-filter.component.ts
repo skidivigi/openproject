@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -35,18 +34,25 @@ import { HalResourceService } from 'core-app/features/hal/services/hal-resource.
 import { WorkPackageViewFiltersService } from 'core-app/features/work-packages/routing/wp-view-base/view-services/wp-view-filters.service';
 import { QueryFilterInstanceResource } from 'core-app/features/hal/resources/query-filter-instance-resource';
 import { UrlParamsHelperService } from 'core-app/features/work-packages/components/wp-query/url-params-helper';
-import { debounceTime, skip, take } from 'rxjs/operators';
+import { debounceTime, finalize, skip, take } from 'rxjs/operators';
 import { UntilDestroyedMixin } from 'core-app/shared/helpers/angular/until-destroyed.mixin';
 import { Observable } from 'rxjs';
 import { BoardFiltersService } from 'core-app/features/boards/board/board-filter/board-filters.service';
 import { BoardActionsRegistryService } from 'core-app/features/boards/board/board-actions/board-actions-registry.service';
 import { ApiV3Service } from 'core-app/core/apiv3/api-v3.service';
 import * as Turbo from '@hotwired/turbo';
+import { v4 as uuidv4 } from 'uuid';
+import { I18nService } from 'core-app/core/i18n/i18n.service';
+import { buildBoardCustomFilter } from 'core-app/features/boards/board/board-filter/board-custom-filter';
+import { BoardService } from 'core-app/features/boards/board/board.service';
+import { HalResourceNotificationService } from 'core-app/features/hal/services/hal-resource-notification.service';
+import { ToastService } from 'core-app/shared/components/toaster/toast.service';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
   selector: 'board-filter',
   templateUrl: './board-filter.component.html',
+  styleUrls: ['./board-filter.component.sass'],
   standalone: false,
   // TODO: This component has been partially migrated to be zoneless-compatible.
   // After testing, this should be updated to ChangeDetectionStrategy.OnPush.
@@ -63,11 +69,27 @@ export class BoardFilterComponent extends UntilDestroyedMixin implements AfterVi
   private readonly urlParamsHelper = inject(UrlParamsHelperService);
   private readonly boardFilters = inject(BoardFiltersService);
   private readonly boardActionRegistry = inject(BoardActionsRegistryService);
+  private readonly boards = inject(BoardService);
+  private readonly halNotification = inject(HalResourceNotificationService);
+  private readonly toastService = inject(ToastService);
+  private readonly I18n = inject(I18nService);
 
   /** Current active */
   @Input() public board$:Observable<Board>;
 
   initialized = false;
+
+  board?:Board;
+
+  customFilterName = '';
+
+  savingCustomFilter = false;
+
+  readonly text = {
+    name: this.I18n.t('js.boards.custom_filters.name'),
+    save: this.I18n.t('js.boards.custom_filters.save'),
+    createSuccessful: this.I18n.t('js.notice_successful_create'),
+  };
 
   ngAfterViewInit():void {
     if (!this.board$) {
@@ -77,6 +99,8 @@ export class BoardFilterComponent extends UntilDestroyedMixin implements AfterVi
     this.board$
       .pipe(take(1))
       .subscribe((board) => {
+        this.board = board;
+
         // Initially load the form once to be able to render filters
         this.loadQueryForm();
 
@@ -113,6 +137,51 @@ export class BoardFilterComponent extends UntilDestroyedMixin implements AfterVi
         Turbo.session.history.push(url);
 
         this.boardFilters.filters.putValue(filterHash);
+      });
+  }
+
+  get customFilterSaveDisabled():boolean {
+    return this.savingCustomFilter
+      || !this.customFilterName.trim()
+      || this.boardFilters.current.length === 0;
+  }
+
+  saveCustomFilter(event:Event):void {
+    event.preventDefault();
+
+    const board = this.board;
+    const customFilter = buildBoardCustomFilter(
+      uuidv4(),
+      this.customFilterName,
+      this.boardFilters.current,
+    );
+    if (!board || !customFilter) {
+      return;
+    }
+
+    const previousCustomFilters = this.boardFilters.currentCustomFilters;
+    const previousBoardFilters = board.filters;
+    board.customFilters = [...previousCustomFilters, customFilter];
+    board.filters = [];
+    this.savingCustomFilter = true;
+
+    this.boards.save(board)
+      .pipe(finalize(() => {
+        this.savingCustomFilter = false;
+      }))
+      .subscribe({
+        next: (savedBoard) => {
+          this.board = savedBoard;
+          this.boardFilters.addCustomFilter(customFilter);
+          this.wpTableFilters.update([]);
+          this.customFilterName = '';
+          this.toastService.addSuccess(this.text.createSuccessful);
+        },
+        error: (error) => {
+          board.customFilters = previousCustomFilters;
+          board.filters = previousBoardFilters;
+          this.halNotification.handleRawError(error);
+        },
       });
   }
 

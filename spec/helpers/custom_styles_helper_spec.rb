@@ -192,12 +192,12 @@ RSpec.describe CustomStylesHelper do
     subject(:logo_urls) { helper.resolved_logo_urls }
 
     context "without custom styles" do
-      it "returns distinct default mobile logos" do
+      it "returns the canonical company logo for every mobile mode" do
         expect(logo_urls[:mobile]).to eq(
-          light: helper.asset_path("icon_logo.svg"),
-          white: helper.asset_path("icon_logo_white.svg"),
-          light_high_contrast: helper.asset_path("icon_logo.svg"),
-          dark: helper.asset_path("icon_logo_white.svg")
+          light: helper.asset_path("company-logo.png"),
+          white: helper.asset_path("company-logo.png"),
+          light_high_contrast: helper.asset_path("company-logo.png"),
+          dark: helper.asset_path("company-logo.png")
         )
       end
     end
@@ -237,9 +237,9 @@ RSpec.describe CustomStylesHelper do
         )
 
         expect(logo_urls[:desktop]).to eq(
-          light: helper.asset_path("logo_openproject_white_big.png"),
+          light: helper.asset_path("company-logo.png"),
           light_high_contrast: path,
-          dark: helper.asset_path("logo_openproject_white_big.png")
+          dark: helper.asset_path("company-logo.png")
         )
       end
     end
@@ -285,8 +285,8 @@ RSpec.describe CustomStylesHelper do
         )
 
         expect(logo_urls[:desktop]).to eq(
-          light: helper.asset_path("logo_openproject_white_big.png"),
-          light_high_contrast: helper.asset_path("logo_openproject.png"),
+          light: helper.asset_path("company-logo.png"),
+          light_high_contrast: helper.asset_path("company-logo.png"),
           dark: path
         )
       end
@@ -303,7 +303,7 @@ RSpec.describe CustomStylesHelper do
         )
 
         expect(logo_urls.dig(:desktop, :dark)).to eq(path)
-        expect(logo_urls.dig(:desktop, :light)).to eq(helper.asset_path("logo_openproject_white_big.png"))
+        expect(logo_urls.dig(:desktop, :light)).to eq(helper.asset_path("company-logo.png"))
       end
     end
 
@@ -319,7 +319,7 @@ RSpec.describe CustomStylesHelper do
 
         expect(logo_urls[:desktop]).to eq(
           light: helper.asset_path(current_theme.theme_logo),
-          light_high_contrast: helper.asset_path("logo_openproject.png"),
+          light_high_contrast: helper.asset_path("company-logo.png"),
           dark: path
         )
       end
@@ -328,11 +328,11 @@ RSpec.describe CustomStylesHelper do
     context "with a theme logo and Russian locale", with_ee: %i[define_custom_style] do
       let(:current_theme) { create(:custom_style, theme_logo: "logo_openproject.png") }
 
-      it "substitutes the Russian variant for the theme logo" do
+      it "uses the canonical company logo for a legacy built-in theme logo" do
         I18n.with_locale(:ru) do
-          expect(logo_urls.dig(:desktop, :light)).to eq(helper.asset_path("logo-black-bg-ua.png"))
-          expect(logo_urls.dig(:desktop, :dark)).to eq(helper.asset_path("logo-black-bg-ua.png"))
-          expect(logo_urls.dig(:desktop, :light_high_contrast)).to eq(helper.asset_path("logo-black-bg-ua.png"))
+          expect(logo_urls.dig(:desktop, :light)).to eq(helper.asset_path("company-logo.png"))
+          expect(logo_urls.dig(:desktop, :dark)).to eq(helper.asset_path("company-logo.png"))
+          expect(logo_urls.dig(:desktop, :light_high_contrast)).to eq(helper.asset_path("company-logo.png"))
         end
       end
     end

@@ -1,0 +1,90 @@
+@import 'helpers'
+
+:host
+  --board-filter-surface: #f2fafa
+  --board-filter-surface-strong: #e7f7f2
+  --board-filter-border: #a9d7d2
+  --board-filter-text: #123047
+  --board-filter-muted: #476777
+  --board-filter-primary: #0b6f7a
+  --board-filter-primary-hover: #0b5f73
+  --board-filter-button-text: #ffffff
+  --board-filter-focus: rgba(15, 118, 110, 0.28)
+  --board-filter-shadow: rgba(11, 59, 90, 0.1)
+
+:host-context([data-color-mode='dark'])
+  --board-filter-surface: #102a33
+  --board-filter-surface-strong: #153842
+  --board-filter-border: #2a6770
+  --board-filter-text: #eaf7f5
+  --board-filter-muted: #b9d4d4
+  --board-filter-primary: #2fb3a4
+  --board-filter-primary-hover: #54c8bb
+  --board-filter-button-text: #062f33
+  --board-filter-focus: rgba(47, 179, 164, 0.35)
+  --board-filter-shadow: rgba(0, 0, 0, 0.26)
+
+.board-filter--save-form
+  display: grid
+  grid-template-columns: minmax(0, 1fr) auto
+  align-items: end
+  gap: $spot-spacing-1
+  margin-top: $spot-spacing-1
+  margin-inline-start: $spot-spacing-1
+  padding: $spot-spacing-1
+  border: 1px solid var(--board-filter-border)
+  border-radius: 8px
+  background: var(--board-filter-surface)
+  box-shadow: 0 6px 18px var(--board-filter-shadow)
+
+.board-filter--name-field
+  min-width: 0
+  margin-bottom: 0
+
+  .form--label
+    color: var(--board-filter-text)
+    letter-spacing: 0.01em
+
+  .form--text-field
+    border-color: var(--board-filter-border)
+    background: var(--board-filter-surface-strong)
+    color: var(--board-filter-text)
+    transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease
+
+    &:hover
+      border-color: var(--board-filter-primary)
+
+    &:focus-visible
+      border-color: var(--board-filter-primary)
+      box-shadow: 0 0 0 3px var(--board-filter-focus)
+      outline: 0
+
+.board-filter--save-button.button
+  min-height: 40px
+  margin: 0
+  border-color: var(--board-filter-primary)
+  border-radius: 6px
+  background: var(--board-filter-primary)
+  color: var(--board-filter-button-text)
+  font-weight: 600
+  transition: background-color 150ms ease, border-color 150ms ease, box-shadow 150ms ease
+
+  &:hover:not(:disabled)
+    border-color: var(--board-filter-primary-hover)
+    background: var(--board-filter-primary-hover)
+
+  &:focus-visible
+    box-shadow: 0 0 0 3px var(--board-filter-focus)
+    outline: 0
+
+  &:disabled
+    border-color: var(--board-filter-border)
+    background: var(--board-filter-border)
+    color: var(--board-filter-muted)
+
+@media screen and (max-width: 680px)
+  .board-filter--save-form
+    grid-template-columns: 1fr
+
+  .board-filter--save-button.button
+    width: 100%

@@ -20,27 +20,105 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
 
-import { input } from '@openproject/reactivestates';
 import { Injectable } from '@angular/core';
-import { ApiV3Filter } from 'core-app/shared/helpers/api-v3/api-v3-filter-builder';
+import { input } from '@openproject/reactivestates';
+import type { BoardCustomFilter } from 'core-app/features/boards/board/board';
+import type { ApiV3Filter } from 'core-app/shared/helpers/api-v3/api-v3-filter-builder';
+import { composeBoardFilters } from './board-filter-composition';
 
 @Injectable()
 export class BoardFiltersService {
-  /**
-   * We need to remember the current filter, that may either come
-   * from the saved board, or were assigned by the user.
-   *
-   * This is due to the fact we do not work on an query object here.
-   */
-  filters = input<ApiV3Filter[]>([]);
+  readonly filters = input<ApiV3Filter[]>([]);
+
+  readonly effectiveFilters = input<ApiV3Filter[]>([]);
+
+  readonly customFilters = input<BoardCustomFilter[]>([]);
+
+  readonly activeCustomFilterIds = input<string[]>([]);
+
+  private protectedFilterNames:string[] = [];
+
+  constructor() {
+    this.filters.values$().subscribe(() => this.updateEffectiveFilters());
+  }
 
   get current():ApiV3Filter[] {
     return this.filters.getValueOr([]);
+  }
+
+  get effectiveCurrent():ApiV3Filter[] {
+    return this.effectiveFilters.getValueOr([]);
+  }
+
+  get currentCustomFilters():BoardCustomFilter[] {
+    return this.customFilters.getValueOr([]);
+  }
+
+  initializeCustomFilters(
+    customFilters:BoardCustomFilter[],
+    protectedFilterNames:string[] = [],
+  ):void {
+    this.customFilters.putValue(customFilters);
+    this.activeCustomFilterIds.putValue([]);
+    this.protectedFilterNames = protectedFilterNames;
+    this.updateEffectiveFilters();
+  }
+
+  addCustomFilter(customFilter:BoardCustomFilter, activate = true):void {
+    this.customFilters.putValue([...this.currentCustomFilters, customFilter]);
+
+    if (activate) {
+      this.activeCustomFilterIds.putValue([
+        ...this.activeCustomFilterIds.getValueOr([] as string[]),
+        customFilter.id,
+      ]);
+    }
+
+    this.updateEffectiveFilters();
+  }
+
+  removeCustomFilter(id:string):void {
+    this.customFilters.putValue(
+      this.currentCustomFilters.filter((customFilter) => customFilter.id !== id),
+    );
+    this.activeCustomFilterIds.putValue(
+      this.activeCustomFilterIds.getValueOr([] as string[]).filter((activeId) => activeId !== id),
+    );
+    this.updateEffectiveFilters();
+  }
+
+  toggleCustomFilter(id:string):void {
+    const activeIds = this.activeCustomFilterIds.getValueOr([] as string[]);
+    this.activeCustomFilterIds.putValue(
+      activeIds.includes(id)
+        ? activeIds.filter((activeId) => activeId !== id)
+        : [...activeIds, id],
+    );
+    this.updateEffectiveFilters();
+  }
+
+  isCustomFilterActive(id:string):boolean {
+    return this.activeCustomFilterIds.getValueOr([] as string[]).includes(id);
+  }
+
+  private updateEffectiveFilters():void {
+    const customFiltersById = new Map(this.currentCustomFilters.map((filter) => [filter.id, filter]));
+    const activeFilterGroups = this.activeCustomFilterIds
+      .getValueOr([])
+      .flatMap((id) => {
+        const customFilter = customFiltersById.get(id);
+        return customFilter ? [customFilter.filters] : [];
+      });
+
+    this.effectiveFilters.putValue(composeBoardFilters(
+      this.current,
+      activeFilterGroups,
+      this.protectedFilterNames,
+    ));
   }
 }

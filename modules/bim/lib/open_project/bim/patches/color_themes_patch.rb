@@ -31,7 +31,7 @@ module OpenProject::Bim
               "main-menu-bg-selected-background" => "#3270DB",
               # TODO 'new-feature-teaser-image' => '#{image-url("bim/new_feature_teaser.jpg")}'
             },
-            logo: "bim/logo_openproject_bim_big.png"
+            logo: OpenProject::CustomStyles::Design.logo_asset_path
           }
         end
       end

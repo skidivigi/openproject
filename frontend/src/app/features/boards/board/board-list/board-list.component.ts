@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -70,6 +69,7 @@ import { BoardListMenuComponent } from 'core-app/features/boards/board/board-lis
 import { debugLog } from 'core-app/shared/helpers/debug_output';
 import { WorkPackageCardDragAndDropService } from 'core-app/features/work-packages/components/wp-card-view/services/wp-card-drag-and-drop.service';
 import { BoardFiltersService } from 'core-app/features/boards/board/board-filter/board-filters.service';
+import { composeBoardListFilters } from 'core-app/features/boards/board/board-filter/board-filter-composition';
 import { WorkPackageViewFocusService } from 'core-app/features/work-packages/routing/wp-view-base/view-services/wp-view-focus.service';
 import { WorkPackageViewSelectionService } from 'core-app/features/work-packages/routing/wp-view-base/view-services/wp-view-selection.service';
 import { BoardListCrossSelectionService } from 'core-app/features/boards/board/board-list/board-list-cross-selection.service';
@@ -254,7 +254,7 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
 
     // Update query on filter change
     this.boardFilters
-      .filters
+      .effectiveFilters
       .values$()
       .pipe(
         this.untilDestroyed(),
@@ -364,7 +364,7 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
   }
 
   public updateQuery(visibly = true) {
-    this.setQueryProps(this.boardFilters.current);
+    this.setQueryProps(this.boardFilters.effectiveCurrent);
     this.loadQuery(visibly);
   }
 
@@ -479,7 +479,7 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
   private setQueryProps(filters:ApiV3Filter[]) {
     const existingFilters = (this.resource.options.filters || []) as ApiV3Filter[];
 
-    const newFilters = existingFilters.concat(filters);
+    const newFilters = composeBoardListFilters(filters, existingFilters);
     const newColumnsQueryProps:any = {
       'columns[]': ['id', 'subject'],
       showHierarchies: false,

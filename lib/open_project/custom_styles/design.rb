@@ -45,6 +45,10 @@ module OpenProject::CustomStyles
       identifier == :core_design
     end
 
+    def logo_asset_path
+      "company-logo.png".freeze
+    end
+
     ##
     # Path to favicon
     def favicon_asset_path

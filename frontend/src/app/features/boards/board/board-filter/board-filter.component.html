@@ -1,1 +1,26 @@
 <op-filter-container />
+
+@if (board?.editable) {
+  <form class="board-filter--save-form" (submit)="saveCustomFilter($event)">
+    <div class="form--field -required board-filter--name-field">
+      <label class="form--label -bold" for="board-custom-filter-name">{{ text.name }}</label>
+      <div class="form--field-container">
+        <div class="form--text-field-container">
+          <input
+            class="form--text-field"
+            id="board-custom-filter-name"
+            name="board-custom-filter-name"
+            type="text"
+            [(ngModel)]="customFilterName"
+            required
+          />
+        </div>
+      </div>
+    </div>
+    <button
+      type="submit"
+      class="button -primary -with-icon icon-save board-filter--save-button"
+      [disabled]="customFilterSaveDisabled"
+    >{{ text.save }}</button>
+  </form>
+}

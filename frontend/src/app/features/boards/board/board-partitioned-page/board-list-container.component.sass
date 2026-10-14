@@ -1,5 +1,11 @@
 @import 'helpers'
 
+:host
+  display: flex
+  flex-direction: column
+  min-height: 0
+  height: 100%
+
 $board-list-max-width: 300px
 $board-list-top-offset: 18px
 
@@ -7,8 +13,8 @@ $board-list-top-offset: 18px
   display: flex
   flex-direction: row
   flex-wrap: nowrap
-  flex-grow: 1
-  height: 100%
+  flex: 1 1 auto
+  min-height: 0
 
   // Make it scrollable
   overflow-y: auto
