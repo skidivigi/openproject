@@ -3,9 +3,10 @@ ARG DEBIAN_BASE="trixie"
 # Add SBOM scan context for intermediate steps
 ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
 ARG BUILDKIT_SBOM_SCAN_STAGE=true
-FROM ruby:${RUBY_VERSION}-slim-trixie AS runtime-base
+FROM ruby:${RUBY_VERSION}-slim-${DEBIAN_BASE} AS runtime-base
 LABEL maintainer="operations@openproject.com"
 
+ARG BUNDLER_VERSION="4.0.21"
 ARG NODE_VERSION="24.19.0"
 # npm bundled with node lags behind on patches for its vendored deps (e.g. tar)
 ARG NPM_VERSION="11.19.0"
@@ -56,7 +57,7 @@ RUN useradd -d /home/$APP_USER -m $APP_USER && \
 WORKDIR $APP_PATH
 
 # upgrade bundler
-RUN gem install bundler --no-document
+RUN gem install bundler --version "$BUNDLER_VERSION" --no-document
 
 # runtime dependencies
 COPY ./docker/prod/setup/preinstall-common.sh ./docker/prod/setup/preinstall-common.sh

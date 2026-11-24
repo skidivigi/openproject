@@ -124,6 +124,18 @@ export class Board {
     this.grid.options.customFilters = filters;
   }
 
+  public get canGroupByProject():boolean {
+    return this.actionAttribute === 'status';
+  }
+
+  public get groupByProject():boolean {
+    return this.grid.options.groupByProject === true;
+  }
+
+  public set groupByProject(groupByProject:boolean) {
+    this.grid.options.groupByProject = groupByProject;
+  }
+
   public sortWidgets() {
     this.grid.widgets = this.grid.widgets.sort((a, b) => a.startColumn - b.startColumn);
   }

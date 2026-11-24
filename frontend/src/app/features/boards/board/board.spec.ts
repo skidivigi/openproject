@@ -29,7 +29,7 @@ import type { GridResource } from 'core-app/features/hal/resources/grid-resource
 import type { BoardCustomFilter } from './board';
 import { Board } from './board';
 
-describe('Board custom filters', () => {
+describe('Board', () => {
   const customFilter:BoardCustomFilter = {
     id: 'urgent',
     name: 'Urgent work',
@@ -44,5 +44,27 @@ describe('Board custom filters', () => {
 
     expect(board.customFilters).toEqual([customFilter]);
     expect(grid.options.customFilters).toEqual([customFilter]);
+  });
+
+  it('stores whether work packages are grouped by project', () => {
+    const grid = { options: {} } as GridResource;
+    const board = new Board(grid);
+
+    expect(board.groupByProject).toBe(false);
+
+    board.groupByProject = true;
+
+    expect(board.groupByProject).toBe(true);
+    expect(grid.options.groupByProject).toBe(true);
+  });
+
+  it('supports project grouping on status boards', () => {
+    const statusBoard = new Board({ options: { type: 'action', attribute: 'status' } } as unknown as GridResource);
+    const assigneeBoard = new Board({ options: { type: 'action', attribute: 'assignee' } } as unknown as GridResource);
+    const freeBoard = new Board({ options: { type: 'free' } } as unknown as GridResource);
+
+    expect(statusBoard.canGroupByProject).toBe(true);
+    expect(assigneeBoard.canGroupByProject).toBe(false);
+    expect(freeBoard.canGroupByProject).toBe(false);
   });
 });

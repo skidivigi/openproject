@@ -30,14 +30,13 @@
 
 require "mini_magick"
 
-# Ensure ImageMagick reads the project-local policy.xml (websafe)
-# ENV["MAGICK_CONFIGURE_PATH"] ||= Rails.root.join("config/imagemagick").to_s
+magick_configure_paths = [
+  MiniMagick.cli_env.fetch("MAGICK_CONFIGURE_PATH", nil),
+  Rails.root.join("config/imagemagick").to_s
+].compact.join(File::PATH_SEPARATOR)
 
 MiniMagick.configure do |config|
   # configure MiniMagick CLI to use ImageMagick (not GraphicsMagick)
   config.graphicsmagick = false
-  # also set the MAGICK_CONFIGURE_PATH for the CLI commands
-  config.cli_env = {
-    "MAGICK_CONFIGURE_PATH" => Rails.root.join("config/imagemagick").to_s
-  }
+  config.cli_env = config.cli_env.merge("MAGICK_CONFIGURE_PATH" => magick_configure_paths)
 end

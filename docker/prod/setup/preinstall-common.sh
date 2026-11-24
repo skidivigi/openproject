@@ -24,7 +24,7 @@ ARCHITECTURE=$(get_architecture)
 
 apt-get update -qq
 # make sure all dependencies are up to date
-apt-get upgrade -y
+apt-get upgrade -yq --with-new-pkgs
 
 apt-get install -yq --no-install-recommends \
   ca-certificates \
@@ -95,7 +95,14 @@ apt-get purge -yq --auto-remove \
 
 # curl/wget are only needed during installation in this stage.
 apt-get purge -yq --auto-remove \
+  curl \
   wget
+
+mkdir -p /usr/share/openproject
+dpkg-query -W -f='${binary:Package}\t${Version}\n' \
+  | grep -E '^(curl|libcurl|imagemagick|libmagick|libvips|openssl|libssl|vips)' \
+  | sort -u \
+  > /usr/share/openproject/security-packages.tsv
 
 rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* /root/.npm
 truncate -s 0 /var/log/*log

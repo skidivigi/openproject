@@ -45,7 +45,26 @@ export function composeBoardFilters(
 
   customFilterGroups.flat().forEach((filter) => {
     const name = filterName(filter);
-    if (!ignoredNames.has(name)) {
+    if (ignoredNames.has(name)) {
+      return;
+    }
+
+    const existing = filtersByName.get(name);
+    const nextValue = filter[name];
+    const existingValue = existing?.[name];
+
+    const customFieldUsesAnd = /^customField\d+$/.test(name)
+      && ['=', '&='].includes(existingValue?.operator ?? '')
+      && ['=', '&='].includes(nextValue.operator);
+
+    if (existingValue && (existingValue.operator === nextValue.operator || customFieldUsesAnd)) {
+      filtersByName.set(name, {
+        [name]: {
+          operator: customFieldUsesAnd ? '&=' : nextValue.operator,
+          values: Array.from(new Set([...existingValue.values, ...nextValue.values])),
+        },
+      });
+    } else {
       filtersByName.set(name, filter);
     }
   });

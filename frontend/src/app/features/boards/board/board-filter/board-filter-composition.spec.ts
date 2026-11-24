@@ -47,11 +47,14 @@ describe('board filter composition', () => {
     ]);
   });
 
-  it('lets the most recently activated custom filter replace the same field', () => {
+  it('combines custom-field values with AND semantics', () => {
     expect(composeBoardFilters(
-      [filter('status', ['1'])],
-      [[filter('status', ['2'])], [filter('status', ['3'])]],
-    )).toEqual([filter('status', ['3'])]);
+      [filter('priority', ['1'])],
+      [[filter('customField12', ['2', '3'])], [filter('customField12', ['3', '4'])]],
+    )).toEqual([
+      filter('priority', ['1']),
+      { customField12: { operator: '&=', values: ['2', '3', '4'] } },
+    ]);
   });
 
   it('ignores structural and action filters from custom filters', () => {
