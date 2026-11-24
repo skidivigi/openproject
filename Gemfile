@@ -39,6 +39,7 @@ gem "actionpack-xml_parser", "~> 2.0.0"
 gem "activerecord-import", "~> 3.0.1"
 gem "activerecord-session_store", "~> 2.3.0"
 gem "ox"
+gem "rack", "~> 2.2.25"
 gem "rails", "~> 8.1.4", ">= 8.1.4.1"
 gem "responders", "~> 3.2"
 
@@ -185,7 +186,7 @@ gem "rails-i18n", "~> 8.1.0"
 
 # Binding json to a version below 3 as sprockets does not
 # limit the json version but fails with 3+.
-gem "json", "< 3"
+gem "json", ">= 2.18.3", "< 3"
 gem "sprockets", "~> 3.7.2" # lock sprockets below 4.0
 gem "sprockets-rails", "~> 3.5.1"
 
@@ -193,7 +194,7 @@ gem "puma", "~> 8.0"
 gem "puma-plugin-statsd", "~> 2.7"
 gem "rack-timeout", "~> 0.7.0", require: "rack/timeout/base"
 
-gem "nokogiri", "~> 1.19.4"
+gem "nokogiri", "~> 1.19.5"
 
 gem "carrierwave", "~> 2.2.7"
 gem "carrierwave_direct", "~> 3.0.0"

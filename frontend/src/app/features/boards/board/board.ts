@@ -37,6 +37,12 @@ export interface BoardWidgetOption {
   filters:ApiV3Filter[];
 }
 
+export interface BoardCustomFilter {
+  id:string;
+  name:string;
+  filters:ApiV3Filter[];
+}
+
 export class Board {
   constructor(public grid:GridResource) {
   }
@@ -108,6 +114,26 @@ export class Board {
 
   public set filters(filters:ApiV3Filter[]) {
     this.grid.options.filters = filters;
+  }
+
+  public get customFilters():BoardCustomFilter[] {
+    return (this.grid.options.customFilters ?? []) as BoardCustomFilter[];
+  }
+
+  public set customFilters(filters:BoardCustomFilter[]) {
+    this.grid.options.customFilters = filters;
+  }
+
+  public get canGroupByProject():boolean {
+    return this.actionAttribute === 'status';
+  }
+
+  public get groupByProject():boolean {
+    return this.grid.options.groupByProject === true;
+  }
+
+  public set groupByProject(groupByProject:boolean) {
+    this.grid.options.groupByProject = groupByProject;
   }
 
   public sortWidgets() {

@@ -1,0 +1,30 @@
+@import 'helpers'
+
+.board-filter--save-form
+  display: grid
+  grid-template-columns: minmax(0, 1fr) auto
+  align-items: end
+  gap: $spot-spacing-1
+  margin-block: $spot-spacing-1 10px
+  margin-inline: 20px 15px
+  padding: $spot-spacing-1
+  border: 1px solid var(--borderColor-default)
+  border-radius: var(--borderRadius-medium)
+  background: var(--body-background)
+
+.board-filter--name-field
+  min-width: 0
+  margin-bottom: 0
+
+.board-filter--save-button.button
+  min-height: 40px
+  margin: 0
+
+@media screen and (max-width: 680px)
+  .board-filter--save-form
+    grid-template-columns: 1fr
+    margin-inline: 4px
+    padding: 8px
+
+  .board-filter--save-button.button
+    width: 100%

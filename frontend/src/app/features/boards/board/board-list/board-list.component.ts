@@ -68,6 +68,12 @@ import { BoardListMenuComponent } from 'core-app/features/boards/board/board-lis
 import { debugLog } from 'core-app/shared/helpers/debug_output';
 import { WorkPackageCardDragAndDropService } from 'core-app/features/work-packages/components/wp-card-view/services/wp-card-drag-and-drop.service';
 import { BoardFiltersService } from 'core-app/features/boards/board/board-filter/board-filters.service';
+import {
+  BoardProjectGroup,
+  boardProjectListFilters,
+  boardProjectListId,
+  boardProjectQueryProps,
+} from 'core-app/features/boards/board/board-project-grouping';
 import { WorkPackageViewFocusService } from 'core-app/features/work-packages/routing/wp-view-base/view-services/wp-view-focus.service';
 import { WorkPackageViewSelectionService } from 'core-app/features/work-packages/routing/wp-view-base/view-services/wp-view-selection.service';
 import { BoardListCrossSelectionService } from 'core-app/features/boards/board/board-list/board-list-cross-selection.service';
@@ -169,6 +175,9 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
 
   /** Access to the board resource */
   @Input() public board:Board;
+
+  @Input() public project:BoardProjectGroup|undefined;
+  @Input() public listManagementEnabled = true;
 
   /** Access to the loading indicator element */
   @ViewChild('loadingIndicator', { static: true }) indicator:ElementRef<HTMLElement>;
@@ -319,7 +328,7 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
 
     // Update query on filter change
     this.boardFilters
-      .filters
+      .effectiveFilters
       .values$()
       .pipe(
         this.untilDestroyed(),
@@ -361,7 +370,8 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
   }
 
   public get canRename() {
-    return this.canManage
+    return this.listManagementEnabled
+      && this.canManage
       && !!this.query.updateImmediately
       && this.board.isFree;
   }
@@ -442,7 +452,7 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
   }
 
   public updateQuery(visibly = true) {
-    this.setQueryProps(this.boardFilters.current);
+    this.setQueryProps(this.boardFilters.effectiveCurrent);
     this.loadQuery(visibly);
   }
 
@@ -452,7 +462,7 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
       this.headerComponent = undefined;
       this.canDragInto = !!query.updateOrderedWorkPackages;
       const canAdd = await this.canAdd;
-      this.showAddButton = this.canDragInto && canAdd;
+      this.showAddButton = this.canDragInto && canAdd && this.canAddToProject;
       return;
     }
 
@@ -476,7 +486,7 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
 
         const canWriteAttribute = await actionService.canAddToQuery(query);
         const canAdd = await this.canAdd;
-        this.showAddButton = this.canDragInto && canAdd && canWriteAttribute;
+        this.showAddButton = this.canDragInto && canAdd && canWriteAttribute && this.canAddToProject;
         this.cdRef.detectChanges();
       });
   }
@@ -518,7 +528,7 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
 
   /** Stable id for this list's wp-card-view under the shared board sortable root */
   public get listId():string {
-    return `board-${this.queryId}`;
+    return boardProjectListId(this.queryId, this.project?.id);
   }
 
   private loadQuery(visibly = true) {
@@ -571,7 +581,12 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
   private setQueryProps(filters:ApiV3Filter[]) {
     const existingFilters = (this.resource.options.filters ?? []) as ApiV3Filter[];
 
-    const newFilters = existingFilters.concat(filters);
+    const newFilters = boardProjectListFilters(
+      filters,
+      existingFilters,
+      this.project?.id,
+      this.currentProject.id,
+    );
     const newColumnsQueryProps:HTTPClientParamMap = {
       'columns[]': ['id', 'subject'],
       showHierarchies: false,
@@ -579,7 +594,11 @@ export class BoardListComponent extends AbstractWidgetComponent implements OnIni
       filters: JSON.stringify(newFilters),
     };
 
-    this.columnsQueryProps = newColumnsQueryProps;
+    this.columnsQueryProps = boardProjectQueryProps(newColumnsQueryProps, this.project?.id);
+  }
+
+  private get canAddToProject():boolean {
+    return !this.project || this.project.id === this.currentProject.id;
   }
 
   private listenToActionAttributeChanges() {

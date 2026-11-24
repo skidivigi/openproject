@@ -61,6 +61,7 @@ module OpenProject
     # specific initializers files. See
     # https://community.openproject.org/wp/45463 for details.
     config.load_defaults 6.1
+    config.active_storage.draw_routes = false
 
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.

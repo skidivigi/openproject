@@ -27,12 +27,14 @@
             [editable]="canRename"
             [initialFocus]="initiallyFocused"
             class="-small" />
-        </h3>
+        }
+      </h3>
+      @if (listManagementEnabled) {
+        <board-list-menu class="op-board-list--menu"
+          data-test-selector="op-board-list--menu"
+          [board]="board"
+          (onRemove)="deleteList()" />
       }
-      <board-list-menu class="op-board-list--menu"
-        data-test-selector="op-board-list--menu"
-        [board]="board"
-        (onRemove)="deleteList()" />
     </div>
     <div class="op-board-list--query-container drop-zone"
       [ngClass]="{ '-with-create-button': board.isAction || showAddButton }">
@@ -67,14 +69,15 @@
     <div class="op-board-list--toaster-box -error">
       <p>
         <span [textContent]="errorMessage"></span>
-        &ngsp;
-        <button
-          type="button"
-          class="spot-link"
-          (click)="onRemove.emit()"
-          >
-          <span [textContent]="text.click_to_remove"></span>
-        </button>
+        @if (listManagementEnabled) {
+          &ngsp;
+          <button
+            type="button"
+            class="spot-link"
+            (click)="onRemove.emit()">
+            <span [textContent]="text.click_to_remove"></span>
+          </button>
+        }
       </p>
     </div>
   }

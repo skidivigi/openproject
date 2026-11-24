@@ -1,55 +1,129 @@
 @if ((board$ | async); as board) {
-  <div
-    class="boards-list--container"
-    [ngClass]="{ '-free' : board.isFree }"
-    #container
-    opSortableLists
-    cdkDropList
-    [cdkDropListDisabled]="!board.editable"
-    cdkDropListOrientation="horizontal"
-    (cdkDropListDropped)="moveList(board, $event)"
-    >
-    @for (boardWidget of boardWidgets; track trackByQueryId($index, boardWidget)) {
-      <div
-        class="boards-list--item"
-        cdkDrag
-        [cdkDragData]="boardWidget"
-        >
-        @if (board.editable) {
-          <span
-            class="boards-list-item-handle icon icon-drag-handle"
-          cdkDragHandle></span>
-        }
-        <board-list [resource]="boardWidget"
-          [board]="board"
-          (onRemove)="removeList(board, boardWidget)"
-          (visibilityChange)="changeVisibilityOfList(board, boardWidget, $event)" />
-      </div>
-    }
-    @if (showHiddenListWarning) {
-      <span class="boards-list--tooltip">
-        <i id="boards-list--warning" class="icon icon-attention"></i>
-        <tool-tip
-          class="sr-only position-absolute"
-          popover="manual"
-          for="boards-list--warning"
-          id="boards-list--warning-tooltip"
-          data-direction="s"
-        >{{ text.hiddenListWarning }}</tool-tip>
-      </span>
-    }
-    @if (board.editable) {
-      <div class="boards-list--add-item -no-text-select"
-        role="button"
-        tabindex="0"
-        (click)="addList(board)"
-        (keydown.enter)="addList(board)"
-        (keydown.space)="addList(board)">
-        <div class="boards-list--add-item-text">
-          <op-icon icon-classes="icon-add icon-context" />
-          <span [textContent]="text.addList"></span>
+  <op-board-custom-filters [board]="board" />
+
+  @if (board.canGroupByProject) {
+    <div class="board-project-grouping">
+      <button
+        type="button"
+        class="board-project-grouping--toggle button -small"
+        [class.-active]="board.groupByProject"
+        [disabled]="!board.editable || boardComponent.toolbarDisabled"
+        [attr.aria-pressed]="board.groupByProject"
+        data-test-selector="board-project-grouping-toggle"
+        (click)="toggleProjectGrouping(board)">
+        <op-icon icon-classes="icon-group-by" />
+        <span [textContent]="text.groupByProject"></span>
+      </button>
+    </div>
+  }
+
+  @if (board.groupByProject && board.canGroupByProject) {
+    <div class="board-project-swimlanes" #container>
+      @if (visibleProjectGroups.length === 0) {
+        <p class="board-project-swimlanes--empty" [textContent]="text.noProjects"></p>
+      }
+      @for (project of visibleProjectGroups; track trackByProjectId($index, project); let manageLists = $first) {
+        <section class="board-project-swimlane" [attr.data-project-id]="project.id">
+          <h2 class="board-project-swimlane--title">
+            <a [href]="projectPath(project)" [textContent]="project.name"></a>
+          </h2>
+          <div
+            class="boards-list--container -swimlane"
+            [ngClass]="{ '-free' : board.isFree }"
+            opSortableLists
+            cdkDropList
+            [cdkDropListDisabled]="!board.editable || !manageLists"
+            cdkDropListOrientation="horizontal"
+            (cdkDropListDropped)="moveList(board, $event)">
+            @for (boardWidget of boardWidgets; track trackByQueryId($index, boardWidget)) {
+              <div
+                class="boards-list--item"
+                cdkDrag
+                [cdkDragData]="boardWidget"
+                [cdkDragDisabled]="!board.editable || !manageLists">
+                @if (board.editable && manageLists) {
+                  <span
+                    class="boards-list-item-handle icon icon-drag-handle"
+                    cdkDragHandle></span>
+                }
+                <board-list
+                  [resource]="boardWidget"
+                  [board]="board"
+                  [project]="project"
+                  [listManagementEnabled]="manageLists"
+                  (onRemove)="removeList(board, boardWidget)"
+                  (visibilityChange)="changeVisibilityOfList(board, boardWidget, $event, project)" />
+              </div>
+            }
+            @if (board.editable && manageLists) {
+              <div class="boards-list--add-item -no-text-select"
+                role="button"
+                tabindex="0"
+                (click)="addList(board)"
+                (keydown.enter)="addList(board)"
+                (keydown.space)="addList(board)">
+                <div class="boards-list--add-item-text">
+                  <op-icon icon-classes="icon-add icon-context" />
+                  <span [textContent]="text.addList"></span>
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  } @else {
+    <div
+      class="boards-list--container"
+      [ngClass]="{ '-free' : board.isFree }"
+      #container
+      opSortableLists
+      cdkDropList
+      [cdkDropListDisabled]="!board.editable"
+      cdkDropListOrientation="horizontal"
+      (cdkDropListDropped)="moveList(board, $event)">
+      @for (boardWidget of boardWidgets; track trackByQueryId($index, boardWidget)) {
+        <div
+          class="boards-list--item"
+          cdkDrag
+          [cdkDragData]="boardWidget">
+          @if (board.editable) {
+            <span
+              class="boards-list-item-handle icon icon-drag-handle"
+              cdkDragHandle></span>
+          }
+          <board-list
+            [resource]="boardWidget"
+            [board]="board"
+            (onRemove)="removeList(board, boardWidget)"
+            (visibilityChange)="changeVisibilityOfList(board, boardWidget, $event)" />
         </div>
-      </div>
-    }
-  </div>
+      }
+      @if (showHiddenListWarning) {
+        <span class="boards-list--tooltip">
+          <i id="boards-list--warning" class="icon icon-attention"></i>
+          <tool-tip
+            class="sr-only position-absolute"
+            popover="manual"
+            for="boards-list--warning"
+            id="boards-list--warning-tooltip"
+            data-direction="s"
+          >{{ text.hiddenListWarning }}</tool-tip>
+        </span>
+      }
+      @if (board.editable) {
+        <div class="boards-list--add-item -no-text-select"
+          role="button"
+          tabindex="0"
+          (click)="addList(board)"
+          (keydown.enter)="addList(board)"
+          (keydown.space)="addList(board)">
+          <div class="boards-list--add-item-text">
+            <op-icon icon-classes="icon-add icon-context" />
+            <span [textContent]="text.addList"></span>
+          </div>
+        </div>
+      }
+    </div>
+  }
 }

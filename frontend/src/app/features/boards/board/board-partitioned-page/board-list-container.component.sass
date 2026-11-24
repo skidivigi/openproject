@@ -1,5 +1,11 @@
 @import 'helpers'
 
+:host
+  display: flex
+  flex-direction: column
+  min-height: 0
+  height: 100%
+
 $board-list-max-width: 300px
 $board-list-top-offset: 18px
 
@@ -7,8 +13,8 @@ $board-list-top-offset: 18px
   display: flex
   flex-direction: row
   flex-wrap: nowrap
-  flex-grow: 1
-  height: 100%
+  flex: 1 1 auto
+  min-height: 0
 
   // Make it scrollable
   overflow-y: auto
@@ -70,3 +76,90 @@ $board-list-top-offset: 18px
 .boards-list--enterprise-banner
   display: block
   margin-left: $spot-spacing-1
+
+.board-project-grouping
+  display: flex
+  flex: 0 0 auto
+  justify-content: flex-end
+  margin-block: 0 10px
+  margin-inline: 20px 15px
+
+.board-project-grouping--toggle.button
+  margin: 0
+
+.board-project-swimlanes
+  display: flex
+  flex: 1 1 auto
+  min-height: 0
+  flex-direction: column
+  gap: $spot-spacing-1
+  padding-block-end: $spot-spacing-1
+  padding-inline: 20px 15px
+  overflow: auto
+  @include styled-scroll-bar
+
+.board-project-swimlanes--empty
+  margin: 0
+  padding: $spot-spacing-1
+  border: 1px dashed var(--borderColor-default)
+  border-radius: 8px
+  color: var(--fgColor-muted)
+  text-align: center
+
+.board-project-swimlane
+  flex: 0 0 auto
+  min-width: max-content
+  border: 1px solid var(--borderColor-default)
+  border-radius: 8px
+  background: var(--body-background)
+
+.board-project-swimlane.-placeholder
+  min-width: calc((var(--board-list-count) * #{$board-list-max-width}) + 60px)
+
+.board-project-swimlane--placeholder
+  min-height: 140px
+  border-top: 1px solid var(--borderColor-default)
+  background: var(--bgColor-muted)
+
+.board-project-swimlane--title
+  position: sticky
+  inset-inline-start: 0
+  z-index: 2
+  width: fit-content
+  max-width: min(420px, calc(100vw - 80px))
+  margin: 0
+  padding: 10px 16px
+  overflow: hidden
+  background: var(--body-background)
+  font-size: 16px
+  text-overflow: ellipsis
+  white-space: nowrap
+
+  a
+    color: var(--body-font-color)
+    text-decoration: none
+
+    &:hover
+      color: var(--primary-color)
+      text-decoration: underline
+      text-underline-offset: 2px
+
+    &:focus-visible
+      border-radius: 2px
+      outline: var(--focus-outline, 2px solid #0969da)
+      outline-offset: 2px
+
+.boards-list--container.-swimlane
+  flex: 0 0 auto
+  min-width: max-content
+  min-height: 140px
+  padding-block-end: 12px
+  overflow: visible
+  border-top: 1px solid var(--borderColor-default)
+
+@media screen and (max-width: 680px)
+  .board-project-grouping
+    margin-inline: 4px
+
+  .board-project-swimlanes
+    padding-inline: 4px

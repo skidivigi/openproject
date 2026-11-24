@@ -1,0 +1,55 @@
+@import 'helpers'
+
+$chip-gap: 8px
+
+.board-custom-filters
+  display: flex
+  flex: 0 0 auto
+  flex-wrap: wrap
+  align-items: center
+  gap: $chip-gap
+  margin-block: 0 10px
+  margin-inline: 20px 15px
+  padding: $spot-spacing-1
+  border: 1px solid var(--borderColor-default)
+  border-radius: var(--borderRadius-medium)
+  background: var(--body-background)
+
+.board-custom-filters--item
+  display: inline-flex
+  max-width: min(100%, 320px)
+
+.board-custom-filters--chip.button,
+.board-custom-filters--delete.button
+  min-height: 34px
+  margin: 0
+
+.board-custom-filters--chip.button
+  min-width: 0
+  overflow: hidden
+  border-bottom-left-radius: 999px
+  border-bottom-right-radius: 0
+  border-top-left-radius: 999px
+  border-top-right-radius: 0
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.board-custom-filters--delete.button
+  flex: 0 0 36px
+  border-bottom-left-radius: 0
+  border-bottom-right-radius: 999px
+  border-left: 0
+  border-top-left-radius: 0
+  border-top-right-radius: 999px
+
+  &:disabled
+    cursor: wait
+    opacity: 0.55
+
+@media screen and (max-width: 680px)
+  .board-custom-filters
+    margin-inline: 4px
+    padding: 8px
+
+  .board-custom-filters--item
+    max-width: 100%

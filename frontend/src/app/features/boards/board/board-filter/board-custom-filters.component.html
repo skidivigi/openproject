@@ -1,0 +1,25 @@
+@if (customFilters.length) {
+  <div class="board-custom-filters" role="group" [attr.aria-label]="text.label">
+    @for (customFilter of customFilters; track customFilter.id) {
+      <div class="board-custom-filters--item">
+        <button
+          type="button"
+          class="button -small board-custom-filters--chip"
+          [class.-active]="isActive(customFilter)"
+          [attr.aria-pressed]="isActive(customFilter)"
+          (click)="toggle(customFilter)"
+        >{{ customFilter.name }}</button>
+        @if (board.editable) {
+          <button
+            type="button"
+            class="button -small -with-icon icon-delete board-custom-filters--delete"
+            [attr.aria-label]="text.delete"
+            [title]="text.delete"
+            [disabled]="removingFilterIds.size > 0"
+            (click)="remove(customFilter)"
+          ></button>
+        }
+      </div>
+    }
+  </div>
+}

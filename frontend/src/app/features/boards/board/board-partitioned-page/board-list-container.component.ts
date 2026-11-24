@@ -27,6 +27,7 @@
 
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   inject,
@@ -68,6 +69,12 @@ import { PathHelperService } from 'core-app/core/path-helper/path-helper.service
 import { CurrentProjectService } from 'core-app/core/current-project/current-project.service';
 import { States } from 'core-app/core/states/states.service';
 import { resolveRoutingId } from 'core-app/features/work-packages/helpers/work-package-id-resolvers';
+import {
+  BoardProjectGroup,
+  boardProjectGroups,
+  filterBoardProjectGroups,
+} from 'core-app/features/boards/board/board-project-grouping';
+import { BoardFiltersService } from 'core-app/features/boards/board/board-filter/board-filters.service';
 
 @Component({
   // eslint-disable-next-line @angular-eslint/component-selector
@@ -96,6 +103,8 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
   readonly QueryUpdated = inject(QueryUpdatedService);
   readonly pathHelper = inject(PathHelperService);
   readonly currentProject = inject(CurrentProjectService);
+  readonly cdRef = inject(ChangeDetectorRef);
+  readonly boardFilters = inject(BoardFiltersService);
 
   @Input() boardId:string;
   text = {
@@ -107,6 +116,8 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
     addList: this.I18n.t('js.boards.add_list'),
     unnamedList: this.I18n.t('js.boards.label_unnamed_list'),
     hiddenListWarning: this.I18n.t('js.boards.text_hidden_list_warning'),
+    groupByProject: this.I18n.t('js.boards.group_by_project'),
+    noProjects: this.I18n.t('js.boards.no_projects'),
   };
 
   /** Container reference */
@@ -133,10 +144,12 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
   @ViewChildren(BoardListComponent) lists:QueryList<BoardListComponent>;
 
   trackByQueryId = (index:number, widget:GridWidgetResource) => widget.options.queryId;
+  trackByProjectId = (index:number, project:BoardProjectGroup) => project.id;
 
   board$:Observable<Board>;
 
   boardWidgets:GridWidgetResource[] = [];
+  projectGroups:BoardProjectGroup[] = [];
 
   showHiddenListWarning = false;
 
@@ -156,6 +169,9 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
       );
 
     this.Boards.currentBoard$.next(id);
+    this.boardFilters.effectiveFilters.values$()
+      .pipe(this.untilDestroyed())
+      .subscribe(() => this.cdRef.markForCheck());
 
     this.boardListCrossSelectionService
       .selections()
@@ -203,18 +219,48 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
     return undefined;
   }
 
-  changeVisibilityOfList(board:Board, boardWidget:GridWidgetResource, visible:boolean) {
-    if (!visible) {
+  changeVisibilityOfList(
+    board:Board,
+    boardWidget:GridWidgetResource,
+    visible:boolean,
+    project?:BoardProjectGroup,
+  ) {
+    if (!visible && !project) {
       this.showHiddenListWarning = true;
       this.boardWidgets = this.boardWidgets.filter((widget) => widget.id !== boardWidget.id);
     }
   }
 
-  saveBoard(board:Board):void {
+  toggleProjectGrouping(board:Board):void {
+    if (!board.canGroupByProject) {
+      return;
+    }
+
+    const previousValue = board.groupByProject;
+    board.groupByProject = !previousValue;
+    if (board.groupByProject && this.projectGroups.length === 0) {
+      this.loadProjectGroups();
+    }
+    this.boardComponent.toolbarDisabled = true;
+    this.saveBoard(board, () => {
+      board.groupByProject = previousValue;
+    });
+  }
+
+  get visibleProjectGroups():BoardProjectGroup[] {
+    return filterBoardProjectGroups(this.projectGroups, this.boardFilters.effectiveCurrent);
+  }
+
+  projectPath(project:BoardProjectGroup):string {
+    return this.pathHelper.projectPath(project.identifier);
+  }
+
+  saveBoard(board:Board, onError?:() => void):void {
     this.Boards
       .save(board)
       .pipe(
         catchError((error) => {
+          onError?.();
           this.halNotification.handleRawError(error);
           return EMPTY;
         }),
@@ -227,7 +273,51 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
       });
   }
 
+  private loadProjectGroups():void {
+    const currentProject = this.currentProject;
+    if (!currentProject.id || !currentProject.identifier || !currentProject.name) {
+      return;
+    }
+
+    const current:BoardProjectGroup = {
+      id: currentProject.id,
+      identifier: currentProject.identifier,
+      name: currentProject.name,
+    };
+    this.projectGroups = [current];
+
+    this.apiv3Service.projects.list({
+      filters: [
+        ['ancestor', '=', [current.id]],
+        ['active', '=', ['t']],
+      ],
+      pageSize: -1,
+      select: ['elements/id', 'elements/name', 'elements/identifier'],
+      sortBy: [['lft', 'asc']],
+    }).pipe(
+      this.untilDestroyed(),
+      catchError((error) => {
+        this.halNotification.handleRawError(error);
+        return EMPTY;
+      }),
+    ).subscribe((collection) => {
+      this.projectGroups = boardProjectGroups(
+        current,
+        collection.elements.map((project) => ({
+          id: project.id!,
+          identifier: project.identifier,
+          name: project.name,
+        })),
+      );
+      this.cdRef.markForCheck();
+    });
+  }
+
   private setupQueryUpdatedMonitoring(board:Board) {
+    if (board.groupByProject && board.canGroupByProject && this.projectGroups.length === 0) {
+      this.loadProjectGroups();
+    }
+
     if (this.currentQueryUpdatedMonitoring) {
       this.currentQueryUpdatedMonitoring.unsubscribe();
     }
