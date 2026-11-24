@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -245,7 +244,8 @@ export class SearchableProjectListService {
     const findPreviousID = (idOfCurrent:ID, projects:IProjectData[], parent?:IProjectData):ID|null => {
       for (let i = 0; i < projects.length; i++) {
         if (projects[i].id === idOfCurrent) {
-          const previous = findLastChild(projects[i - 1]) || projects[i - 1] || parent;
+          const previousSibling = i > 0 ? projects[i - 1] : undefined;
+          const previous = previousSibling ? findLastChild(previousSibling) : parent;
           if (!previous) {
             return null;
           }

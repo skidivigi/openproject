@@ -22,8 +22,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # See COPYRIGHT and LICENSE files for more details.
 #++
@@ -38,9 +37,11 @@ class WorkPackage < ApplicationRecord
   include WorkPackage::Ancestors
   include WorkPackage::Automatable
   include WorkPackage::Hooks
+  include WorkPackage::Origin
   # Must stay above WorkPackage::Journalized: its after_save persists the
   # version rows that the journal snapshot then reads.
   include WorkPackage::Versions
+  include WorkPackage::Categories
   include WorkPackages::DerivedDates
   include WorkPackages::Relations
   include ::Scopes::Scoped
@@ -50,6 +51,7 @@ class WorkPackage < ApplicationRecord
 
   include OpenProject::Journal::AttachmentHelper
 
+  AVAILABLE_CUSTOM_FIELDS_CACHE_PREFIX = "work_package_custom_fields_"
   DONE_RATIO_OPTIONS = %w[field status].freeze
   TOTAL_PERCENT_COMPLETE_MODE_OPTIONS = %w[work_weighted_average simple_average].freeze
 
@@ -99,15 +101,10 @@ class WorkPackage < ApplicationRecord
     end
   }
 
-  scope :with_status_open, -> {
-    includes(:status)
-      .where(statuses: { is_closed: false })
-  }
-
-  scope :with_status_closed, -> {
-    includes(:status)
-      .where(statuses: { is_closed: true })
-  }
+  scope :with_status_open, -> { where(status: Status.not_closed) }
+  scope :with_status_to_do, -> { where(status: Status.to_do) }
+  scope :with_status_in_progress, -> { where(status: Status.in_progress) }
+  scope :with_status_closed, -> { where(status: Status.closed) }
 
   scope :with_limit, ->(limit) {
     limit(limit)
@@ -142,9 +139,6 @@ class WorkPackage < ApplicationRecord
                    if: lambda { |work_package| work_package.errors.messages.has_key? :attachments }
   before_save :close_duplicates, :update_done_ratio_from_status
   before_create :default_assign
-  # By using prepend: true, the callback will be performed before the meeting_agenda_items are nullified,
-  # thus the associated agenda items will be available at the time the callback method is performed.
-  around_destroy :save_agenda_item_journals, prepend: true, if: -> { meeting_agenda_items.any? }
 
   acts_as_customizable validate_on: :saving_custom_fields
 
@@ -152,7 +146,11 @@ class WorkPackage < ApplicationRecord
                                "#{table_name}.description",
                                {
                                  name: "#{Journal.table_name}.notes",
-                                 scope: -> { Journal.for_work_package.where("journable_id = #{table_name}.id") }
+                                 scope: -> {
+                                   Journal.for_work_package
+                                          .where("journable_id = #{table_name}.id")
+                                          .where(internal_journals_visible_condition)
+                                 }
                                }],
                      tsv_columns: [
                        {
@@ -245,8 +243,7 @@ class WorkPackage < ApplicationRecord
 
   # Returns true if this work package is blocked by another work package that is still open
   def blocked?
-    blockers
-      .exists?
+    blockers.exists?
   end
 
   def to_s = to_fs
@@ -267,7 +264,7 @@ class WorkPackage < ApplicationRecord
 
   # Return true if the work_package is closed, otherwise false
   def closed?
-    status.nil? || status.is_closed?
+    status.nil? || status.closed?
   end
 
   # Return true if the work_package's status is_readonly
@@ -403,6 +400,10 @@ class WorkPackage < ApplicationRecord
     Project.allowed_to(user, :move_work_packages)
   end
 
+  def self.allowed_target_projects_on_copy(user)
+    Project.allowed_to(user, :copy_work_packages)
+  end
+
   # Returns a scope for the projects
   # the user is create a work package in
   def self.allowed_target_projects_on_create(user)
@@ -422,7 +423,7 @@ class WorkPackage < ApplicationRecord
     # counted under each of them.
     sql = sanitize_sql_array(
       ["SELECT s.id AS status_id,
-               s.is_closed AS closed,
+               COALESCE(s.category = 'closed', false) AS closed,
                wpv.version_id AS version_id,
                COUNT(i.id) AS total
           FROM #{WorkPackage.table_name} i
@@ -430,7 +431,7 @@ class WorkPackage < ApplicationRecord
           INNER JOIN #{WorkPackageVersion.table_name} wpv
              ON wpv.work_package_id = i.id AND wpv.kind = :kind
          WHERE i.project_id = :project_id
-         GROUP BY s.id, s.is_closed, wpv.version_id",
+         GROUP BY s.id, s.category, wpv.version_id",
        { kind: WorkPackageVersion.kinds[:target], project_id: project.id }]
     )
     ActiveRecord::Base.connection.select_all(sql).to_a
@@ -471,7 +472,7 @@ class WorkPackage < ApplicationRecord
 
     ActiveRecord::Base.connection.select_all(
       "select    s.id as status_id,
-        s.is_closed as closed,
+        COALESCE(s.category = 'closed', false) as closed,
         i.project_id as project_id,
         count(i.id) as total
       from
@@ -479,7 +480,7 @@ class WorkPackage < ApplicationRecord
       where
         i.status_id=s.id
         and i.project_id IN (#{project.descendants.active.map(&:id).join(',')})
-      group by s.id, s.is_closed, i.project_id"
+      group by s.id, s.category, i.project_id"
     ).to_a
   end
 
@@ -494,6 +495,15 @@ class WorkPackage < ApplicationRecord
       .select("#{table_name}.*, COALESCE(max_depth.depth, 0)")
   end
 
+  # closure_tree 9.8 keeps its advisory lock until the outermost transaction commits.
+  # In a savepoint, it releases the lock after each hierarchy change. Use this block for each
+  # work package in a long transaction. If you do not, all work package creates, parent changes
+  # and deletes wait until that transaction commits.
+  # https://github.com/ClosureTree/closure_tree/commit/b4eb3df
+  def self.with_hierarchy_savepoint(&)
+    transaction(requires_new: true, &)
+  end
+
   # Overrides Redmine::Acts::Customizable::ClassMethods#available_custom_fields
   def self.available_custom_fields(work_package)
     if work_package.project_id && work_package.type_id
@@ -503,6 +513,10 @@ class WorkPackage < ApplicationRecord
     else
       []
     end
+  end
+
+  def self.clear_available_custom_fields_cache
+    RequestStore.store.delete_if { |key, _| key.to_s.start_with?(AVAILABLE_CUSTOM_FIELDS_CACHE_PREFIX) }
   end
 
   def self.preload_available_custom_fields(work_packages)
@@ -591,7 +605,7 @@ class WorkPackage < ApplicationRecord
   private_class_method :form_configuration_custom_fields_join
 
   def self.available_custom_field_key(work_package)
-    :"work_package_custom_fields_#{work_package.project_id}_#{work_package.type_id}"
+    :"#{AVAILABLE_CUSTOM_FIELDS_CACHE_PREFIX}#{work_package.project_id}_#{work_package.type_id}"
   end
 
   private_class_method :available_custom_field_key
@@ -622,6 +636,10 @@ class WorkPackage < ApplicationRecord
   end
 
   private
+
+  def default_custom_field_value(custom_field)
+    custom_field.keep_usable_values(super, project)
+  end
 
   def derived_progress_hints
     @derived_progress_hints ||= {}
@@ -691,17 +709,17 @@ class WorkPackage < ApplicationRecord
     where = "i.#{select_field}=j.id"
 
     ActiveRecord::Base.connection.select_all(
-      "select    s.id as status_id,
-        s.is_closed as closed,
-        j.id as #{select_field},
-        count(i.id) as total
-      from
+      "SELECT s.id AS status_id,
+        COALESCE(s.category = 'closed', false) AS closed,
+        j.id AS #{select_field},
+        count(i.id) AS total
+      FROM
           #{WorkPackage.table_name} i, #{Status.table_name} s, #{joins} j
-      where
+      WHERE
         i.status_id=s.id
-        and #{where}
-        and i.project_id=#{project.id}
-      group by s.id, s.is_closed, j.id"
+        AND #{where}
+        AND i.project_id=#{project.id}
+      GROUP BY s.id, s.category, j.id"
     ).to_a
   end
 
@@ -711,15 +729,5 @@ class WorkPackage < ApplicationRecord
     if invalid_attachment = attachments.detect(&:invalid?)
       errors.messages[:attachments].first << " - #{invalid_attachment.errors.full_messages.first}"
     end
-  end
-
-  def save_agenda_item_journals
-    ##
-    # Meetings are stored before they become dissociated from the work package,
-    # but the meeting journals are saved only after the agenda items are dissociated (nullified).
-    # By saving the meeting journals, the agenda item journals are also saved.
-    stored_meetings = meetings.to_a
-    yield
-    stored_meetings.each(&:touch_and_save_journals)
   end
 end

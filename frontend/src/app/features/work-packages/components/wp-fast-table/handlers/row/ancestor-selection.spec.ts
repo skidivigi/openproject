@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -70,6 +69,7 @@ describe('Ancestor row selection', () => {
     { platform: 'MacIntel', metaKey: true },
   ])('anchors Select All on the ancestor on $platform', ({ platform, ...modifiers }) => {
     pretendPlatform(platform);
+    harness.row('1').focus();
     expect(fireEvent.keyDown(harness.row('1'), { key: 'a', ...modifiers })).toBe(false);
     harness.click('2', { shiftKey: true });
     expect(harness.selection.getSelectedWorkPackageIds()).toEqual(['1', '2']);
@@ -86,7 +86,7 @@ describe('Ancestor row selection', () => {
       table: harness.table,
       classIdentifier: harness.row('1').dataset.classIdentifier,
     });
-    expect(form.findCell('subject')).toBe(harness.row('1').querySelector('td.subject'));
+    expect(form.findCell('subject')).toBe(harness.row('1').querySelector(':scope > .wp-table--cell-td.subject'));
   });
 
   it('retains both lookup identities through a row refresh', () => {

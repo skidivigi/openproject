@@ -20,13 +20,12 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
 
-import { createEnvironmentInjector, EnvironmentInjector } from '@angular/core';
+import { createEnvironmentInjector, EnvironmentInjector, DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { EMPTY, of, Subject } from 'rxjs';
 import { States } from 'core-app/core/states/states.service';
@@ -236,9 +235,9 @@ describe('WorkPackageViewFocusService', () => {
       const component = fromPrototype(WorkPackageInlineCreateComponent.prototype, {
         currentWorkPackage: workPackage,
         wpCreate: { onNewWorkPackage: () => created },
-        untilDestroyed: () => (source:unknown) => source,
+        destroyRef: TestBed.inject(DestroyRef),
         resetRow: () => undefined,
-        table: { configuration: { isEmbedded: false } },
+        table: () => ({ destroyed: false, configuration: { isEmbedded: false, selectionEnabled: true }, keyboardNavigation: { rememberWorkPackageAfterRender: () => undefined } }),
         wpTableSelection: selection,
         wpTableFocus: focus,
         wpInlineCreate: { newInlineWorkPackageCreated: new Subject<string>() },

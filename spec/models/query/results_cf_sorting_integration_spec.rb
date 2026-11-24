@@ -22,8 +22,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # See COPYRIGHT and LICENSE files for more details.
 #++
@@ -160,6 +159,21 @@ RSpec.describe Query::Results, "Sorting by custom field" do
           wp_with_cf_value("2024-01-01"),
           wp_with_cf_value("2030-01-01"),
           wp_with_cf_value("999-01-01") # TODO: should be at index 1
+        ]
+      end
+    end
+  end
+
+  context "for datetime format" do
+    include_examples "it sorts" do
+      let(:custom_field) { create(:wp_custom_field, :datetime) }
+
+      let(:work_packages) do
+        [
+          wp_without_cf_value,
+          wp_with_cf_value("2026-01-01T10:30:00+02:00"),
+          wp_with_cf_value("2026-01-01T09:00:00Z"),
+          wp_with_cf_value("2026-06-15T00:00:00Z")
         ]
       end
     end
@@ -347,18 +361,16 @@ RSpec.describe Query::Results, "Sorting by custom field" do
 
   context "for hierarchy format", with_ee: [:custom_field_hierarchies] do
     include_examples "it sorts" do
-      let(:custom_field) { create(:hierarchy_wp_custom_field, hierarchy_root: nil) }
-      let(:root) { service.generate_root(custom_field).value! }
-      let(:service) { CustomFields::Hierarchy::HierarchicalItemService.new }
-      let(:contract_class) { CustomFields::Hierarchy::InsertListItemContract }
+      let(:custom_field) { create(:hierarchy_wp_custom_field) }
+      let(:root) { custom_field.hierarchy_root }
 
-      let!(:item_first) { service.insert_item(contract_class:, parent: root, label: "aa item").value! }
-      let!(:item_a) { service.insert_item(contract_class:, parent: root, label: "item_a").value! }
-      let!(:item_a1) { service.insert_item(contract_class:, parent: item_a, label: "item_a1").value! }
-      let!(:item_a2) { service.insert_item(contract_class:, parent: item_a, label: "item_a2").value! }
-      let!(:item_c) { service.insert_item(contract_class:, parent: root, label: "item_c").value! }
-      let!(:item_b) { service.insert_item(contract_class:, parent: root, label: "item_b").value! }
-      let!(:item_last) { service.insert_item(contract_class:, parent: root, label: "zz item").value! }
+      let!(:item_first) { create(:hierarchy_item, parent: root, label: "aa item") }
+      let!(:item_a) { create(:hierarchy_item, parent: root, label: "item_a") }
+      let!(:item_a1) { create(:hierarchy_item, parent: item_a, label: "item_a1") }
+      let!(:item_a2) { create(:hierarchy_item, parent: item_a, label: "item_a2") }
+      let!(:item_c) { create(:hierarchy_item, parent: root, label: "item_c") }
+      let!(:item_b) { create(:hierarchy_item, parent: root, label: "item_b") }
+      let!(:item_last) { create(:hierarchy_item, parent: root, label: "zz item") }
 
       let(:work_packages) do
         [

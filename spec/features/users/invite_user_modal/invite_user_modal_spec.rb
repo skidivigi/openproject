@@ -22,8 +22,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # See COPYRIGHT and LICENSE files for more details.
 #++
@@ -183,7 +182,7 @@ RSpec.describe "Invite user modal", :js do
       assignee_field.expect_active!
 
       assignee_field.openSelectField
-      find(".ng-dropdown-footer button", text: "Invite", wait: 10).click
+      find(".ng-dropdown-footer", wait: 10).click_button("Invite")
 
       modal.run_all_steps
       expect(page).to have_css(".ng-value-label", text: principal.name)
@@ -203,13 +202,15 @@ RSpec.describe "Invite user modal", :js do
     describe "through the assignee field" do
       let(:wp_page) { Pages::FullWorkPackage.new(work_package, project) }
       let(:assignee_field) { wp_page.edit_field :assignee }
+      let(:additional_projects) { [] }
 
       before do
+        additional_projects
         wp_page.visit!
         retry_block do
           assignee_field.activate!
         end
-        find(".ng-dropdown-footer button", text: "Invite", wait: 10).click
+        find(".ng-dropdown-footer", wait: 10).click_button("Invite")
       end
 
       context "with an existing user" do
@@ -236,18 +237,19 @@ RSpec.describe "Invite user modal", :js do
           # target and the project asserted to be absent have to be ones the
           # current user is a member of. The modal preselects `project`, which
           # would therefore be missing from the dropdown either way.
-          let!(:target_project) do
+          let(:target_project) do
             create(:project,
                    name: "Alpha Initiative",
                    identifier: "zulu-target",
                    members: { current_user => role })
           end
-          let!(:other_project) do
+          let(:other_project) do
             create(:project,
                    name: "Beta Initiative",
                    identifier: "yankee-other",
                    members: { current_user => role })
           end
+          let(:additional_projects) { [target_project, other_project] }
 
           it_behaves_like "a project picker searchable by identifier" do
             let(:control_project) { other_project }
@@ -269,7 +271,7 @@ RSpec.describe "Invite user modal", :js do
                    :list,
                    name: "List",
                    is_required: true,
-                   editable: false,
+                   user_self_editable: false,
                    default_option: "A")
           end
 
@@ -277,18 +279,11 @@ RSpec.describe "Invite user modal", :js do
             list_cf
           end
 
-          it_behaves_like "invites the principal to the project" do
-            let(:added_principal) { principal }
-            let(:mail_membership_recipients) { [principal] }
-          end
+          context "when another required CF value is missing" do
+            let(:string_cf) { create(:user_custom_field, :string, name: "Department", is_required: true) }
 
-          context "when the required list CF value is missing" do
-            let(:list_cf) do
-              create(:user_custom_field,
-                     :list,
-                     name: "List",
-                     is_required: true,
-                     editable: false)
+            before do
+              string_cf
             end
 
             it_behaves_like "invites the principal to the project" do
@@ -319,18 +314,12 @@ RSpec.describe "Invite user modal", :js do
                      :list,
                      name: "List",
                      is_required: true,
-                     editable: false,
+                     user_self_editable: false,
                      default_option: "A")
             end
 
             before do
               list_cf
-            end
-
-            it_behaves_like "invites the principal to the project" do
-              let(:added_principal) { User.find_by!(mail: principal.mail) }
-              let(:mail_invite_recipients) { [added_principal] }
-              let(:mail_membership_recipients) { [added_principal] }
             end
 
             context "when the required list CF value is missing" do
@@ -461,17 +450,11 @@ RSpec.describe "Invite user modal", :js do
                    :list,
                    name: "Department",
                    is_required: true,
-                   editable: false,
                    default_option: "A")
           end
 
           before do
             list_cf
-          end
-
-          it_behaves_like "invites the principal to the project" do
-            let(:added_principal) { principal }
-            let(:mail_membership_recipients) { [group_user] }
           end
 
           context "when the required group CF value is missing" do

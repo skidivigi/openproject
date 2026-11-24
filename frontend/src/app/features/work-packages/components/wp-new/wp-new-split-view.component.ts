@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -118,7 +117,7 @@ export class WorkPackageNewSplitViewComponent extends WorkPackageCreateComponent
 
     // Open the newly created WP in the split panel.
     const basePath = this.urlParams.basePathWithoutDetails();
-    Turbo.visit(`${basePath}/details/${savedResource.id}${window.location.search}`, {
+    Turbo.visit(`${basePath}/details/${savedResource.displayId}${window.location.search}`, {
       frame: 'content-bodyRight',
       action: 'advance',
     });

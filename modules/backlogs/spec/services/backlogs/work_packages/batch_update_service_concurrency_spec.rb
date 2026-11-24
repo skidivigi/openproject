@@ -22,8 +22,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # See COPYRIGHT and LICENSE files for more details.
 #++
@@ -32,46 +31,9 @@ require "spec_helper"
 
 RSpec.describe Backlogs::WorkPackages::BatchUpdateService,
                "concurrent destination updates",
-               type: :model,
-               use_transactional_fixtures: false do
-  self.use_transactional_tests = false
+               type: :model do
+  include_context "with real database commits"
 
-  before do
-    baseline_user_ids
-    baseline_role_ids
-    baseline_status_ids
-    baseline_priority_ids
-    fixture_connection_pool.unpin_connection!
-  end
-
-  after do
-    side_user_ids = factory_side_user_ids
-    project.work_packages.each { |work_package| work_package.reload.destroy! }
-    project.destroy!
-    user.destroy!
-    User.where(id: side_user_ids).destroy_all
-    variants = TypeVariant.where(type_id: type.id)
-    workflow_ids = variants.distinct.pluck(:workflow_id)
-    form_configuration_ids = variants.distinct.pluck(:form_configuration_id)
-    variants.delete_all
-    Workflow.where(id: workflow_ids).destroy_all
-    FormConfiguration.where(id: form_configuration_ids).destroy_all
-    Type.unscoped.where(id: type.id).delete_all
-    Role.where.not(id: baseline_role_ids).destroy_all
-    Status.where.not(id: baseline_status_ids).delete_all
-    IssuePriority.where.not(id: baseline_priority_ids).delete_all
-  ensure
-    fixture_connection_pool.pin_connection!(true)
-  end
-
-  let(:fixture_connection_pool) { ActiveRecord::Base.connection_pool }
-  let(:baseline_user_ids) { User.not_builtin.ids }
-  let(:factory_side_user_ids) do
-    User.not_builtin.where.not(id: [*baseline_user_ids, user.id]).ids
-  end
-  let(:baseline_role_ids) { Role.pluck(:id) }
-  let(:baseline_status_ids) { Status.pluck(:id) }
-  let(:baseline_priority_ids) { IssuePriority.pluck(:id) }
   let!(:type) { create(:type) }
   let!(:project) do
     create(:project, types: [type], enabled_module_names: %i[backlogs work_package_tracking])
@@ -134,6 +96,40 @@ RSpec.describe Backlogs::WorkPackages::BatchUpdateService,
     yield
   rescue StandardError => e
     cleanup_errors << e
+  end
+
+  # rubocop:disable-next RSpec/ExampleLength
+  it "rejects an empty append when an independent writer fills the inbox", retry: 0 do
+    service = described_class.new(user:, work_packages: sprint_work_packages)
+    placement_resolved = Concurrent::Event.new
+    release_batch = Concurrent::Event.new
+    batch_result = Queue.new
+    original_ids = source_sprint.work_packages_for(project).order_by_position.ids
+
+    allow(service).to receive(:resolve_placement).and_wrap_original do |method, *args|
+      placement = method.call(*args)
+      placement_resolved.set
+      raise "timed out waiting for inbox insertion" unless release_batch.wait(5)
+
+      placement
+    end
+    batch_thread = Thread.new do
+      ActiveRecord::Base.connection_pool.with_connection do
+        batch_result << service.call(list_type: "inbox")
+      end
+    end
+    raise "append did not resolve its placement" unless placement_resolved.wait(5)
+
+    inserted = create(:work_package, project:, type:)
+    release_batch.set
+    result = Timeout.timeout(5) { batch_result.pop }
+
+    expect(result).to be_failure
+    expect(result.message).to eq I18n.t("backlogs.work_packages.batch_update_service.stale_predecessor")
+    expect(source_sprint.work_packages_for(project).order_by_position.ids).to eq original_ids
+    expect(WorkPackage.where(project:, sprint_id: nil, backlog_bucket_id: nil).ids).to eq [inserted.id]
+  ensure
+    cleanup_concurrency_threads(release_events: [release_batch], threads: [batch_thread])
   end
 
   # rubocop:disable-next RSpec/ExampleLength

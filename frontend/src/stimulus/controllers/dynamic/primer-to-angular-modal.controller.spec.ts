@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -29,14 +28,13 @@
 import { waitFor } from '@testing-library/dom';
 import { vi, type Mock } from 'vitest';
 
-import { setupStimulusTest, type StimulusTestContext } from 'core-stimulus/test-helpers';
+import { setupStimulusTest, type StimulusTestContext, stubPendingPluginContext, stubPluginContext } from 'core-stimulus/test-helpers';
 import type PrimerToAngularModalControllerType from './primer-to-angular-modal.controller';
 
 describe('Primer to Angular modal controller', () => {
   let ctx:StimulusTestContext;
   let PrimerToAngularModalController:typeof PrimerToAngularModalControllerType;
   let closeMe:Mock;
-  let originalOpenProject:typeof window.OpenProject;
 
   const pluginContext = () => ({
     services: { opModalService: { activeModalInstance$: { value: { closeMe } } } },
@@ -48,10 +46,7 @@ describe('Primer to Angular modal controller', () => {
 
   beforeEach(async () => {
     closeMe = vi.fn();
-    originalOpenProject = window.OpenProject;
-    window.OpenProject = {
-      getPluginContext: () => Promise.resolve(pluginContext()),
-    } as unknown as typeof window.OpenProject;
+    stubPluginContext(pluginContext());
 
     ctx = await setupStimulusTest({
       controllers: { 'primer-to-angular-modal': PrimerToAngularModalController },
@@ -60,7 +55,6 @@ describe('Primer to Angular modal controller', () => {
 
   afterEach(() => {
     ctx.dispose();
-    window.OpenProject = originalOpenProject;
     vi.restoreAllMocks();
   });
 
@@ -89,10 +83,7 @@ describe('Primer to Angular modal controller', () => {
   });
 
   it('does not close when disconnected before the context resolves', async () => {
-    let resolveContext!:(context:unknown) => void;
-    window.OpenProject = {
-      getPluginContext: () => new Promise((resolve) => { resolveContext = resolve; }),
-    } as unknown as typeof window.OpenProject;
+    const resolveContext = stubPendingPluginContext();
 
     const controller = await renderModal();
     const root = ctx.container.querySelector('[data-controller="primer-to-angular-modal"]')!;

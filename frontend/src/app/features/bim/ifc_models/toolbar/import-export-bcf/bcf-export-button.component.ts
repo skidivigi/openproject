@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -40,7 +39,8 @@ import { JobStatusModalService } from 'core-app/features/job-status/job-status-m
 
 @Component({
   template: `
-    <a [title]="text.export_hover"
+    <a opTooltip
+       [description]="text.export_hover"
        class="button export-bcf-button"
        [attr.href]="exportLink"
        (click)="showDelayedExport($event)">
@@ -96,7 +96,7 @@ export class BcfExportButtonComponent extends UntilDestroyedMixin implements OnI
       });
   }
 
-  public showDelayedExport(event:any) {
+  public showDelayedExport(event:Event) {
     this.requestExport(this.exportLink);
 
     event.preventDefault();

@@ -59,6 +59,10 @@ export class Board {
     return this.grid.name;
   }
 
+  public set name(name:string) {
+    this.grid.name = name;
+  }
+
   public get editable() {
     return !!this.grid.updateImmediately;
   }
@@ -85,10 +89,6 @@ export class Board {
 
   public get highlightingMode():CardHighlightingMode {
     return (this.grid.options.highlightingMode || 'none') as CardHighlightingMode;
-  }
-
-  public set name(name:string) {
-    this.grid.name = name;
   }
 
   public addQuery(widget:GridWidgetResource) {

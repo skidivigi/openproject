@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -36,12 +35,14 @@ import { ContextMenuHandler } from './context-menu-handler';
 import { EventType } from 'core-app/features/work-packages/routing/wp-view-base/event-handling/event-handler-registry';
 
 export class ContextMenuRightClickHandler extends ContextMenuHandler {
+  private pointerType = '';
+
   constructor(public readonly injector:Injector) {
     super(injector);
   }
 
-  public get EVENT():EventType {
-    return 'contextmenu'; // N.B.: contextmenu is not supported by Safari on iOS.
+  public get EVENT():EventType[] {
+    return ['contextmenu', 'pointerdown']; // N.B.: contextmenu is not supported by Safari on iOS.
   }
 
   public get SELECTOR() {
@@ -56,7 +57,18 @@ export class ContextMenuRightClickHandler extends ContextMenuHandler {
     if (!view.workPackageTable.configuration.contextMenuEnabled) {
       return false;
     }
+
+    if (evt.type === 'pointerdown') {
+      this.pointerType = evt instanceof PointerEvent ? evt.pointerType : '';
+      this.forgetKeyboardOpen(view.workPackageTable);
+      return true;
+    }
+
     const target = evt.target as HTMLElement;
+
+    if (this.isEditing(target)) {
+      return true;
+    }
 
     // We want to keep the original context menu on hrefs
     // (currently, this is only the id
@@ -65,11 +77,25 @@ export class ContextMenuRightClickHandler extends ContextMenuHandler {
       return true;
     }
 
-    evt.preventDefault();
-    evt.stopPropagation();
+    if (this.consumeCompanion(view.workPackageTable, target)) {
+      evt.preventDefault();
+      evt.stopPropagation();
+      return false;
+    }
+
+    if (this.pointerType !== '' && this.pointerType !== 'mouse') {
+      return true;
+    }
 
     // Locate the row from event
     const element = target.closest<HTMLElement>(this.SELECTOR);
+
+    if (this.isUnsavedRow(element)) {
+      return true;
+    }
+
+    evt.preventDefault();
+    evt.stopPropagation();
 
     if (element?.dataset.workPackageId) {
       this.openContextMenu(view.workPackageTable, evt, element);

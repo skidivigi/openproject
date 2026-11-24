@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -29,18 +28,17 @@
 import { waitFor } from '@testing-library/dom';
 import { vi, type Mock } from 'vitest';
 
-import { setupStimulusTest, type StimulusTestContext } from 'core-stimulus/test-helpers';
+import { setupStimulusTest, type StimulusTestContext, stubPendingPluginContext, stubPluginContext } from 'core-stimulus/test-helpers';
 import type MainToggleControllerType from './main-toggle.controller';
 
 describe('Main menu toggle controller', () => {
   let ctx:StimulusTestContext;
   let MainToggleController:typeof MainToggleControllerType;
-  let initializeMenu:Mock;
-  let toggleNavigation:Mock;
-  let originalOpenProject:typeof window.OpenProject;
+  let syncWithPage:Mock;
+  let toggle:Mock;
 
   const pluginContext = () => ({
-    injector: { get: () => ({ initializeMenu, toggleNavigation }) },
+    injector: { get: () => ({ syncWithPage, toggle }) },
   });
 
   beforeAll(async () => {
@@ -48,12 +46,9 @@ describe('Main menu toggle controller', () => {
   });
 
   beforeEach(async () => {
-    initializeMenu = vi.fn();
-    toggleNavigation = vi.fn();
-    originalOpenProject = window.OpenProject;
-    window.OpenProject = {
-      getPluginContext: () => Promise.resolve(pluginContext()),
-    } as unknown as typeof window.OpenProject;
+    syncWithPage = vi.fn();
+    toggle = vi.fn();
+    stubPluginContext(pluginContext());
 
     ctx = await setupStimulusTest({
       controllers: { 'menus--main-toggle': MainToggleController },
@@ -62,7 +57,6 @@ describe('Main menu toggle controller', () => {
 
   afterEach(() => {
     ctx.dispose();
-    window.OpenProject = originalOpenProject;
     vi.restoreAllMocks();
   });
 
@@ -75,27 +69,25 @@ describe('Main menu toggle controller', () => {
     await renderToggle();
 
     await waitFor(() => {
-      expect(initializeMenu).toHaveBeenCalledTimes(1);
+      expect(syncWithPage).toHaveBeenCalledTimes(1);
     });
   });
 
   it('delegates navigation toggles to the menu service', async () => {
     const controller = await renderToggle();
     await waitFor(() => {
-      expect(initializeMenu).toHaveBeenCalled();
+      expect(syncWithPage).toHaveBeenCalled();
     });
 
-    const event = new CustomEvent('click');
+    const event = new CustomEvent('click', { cancelable: true });
     controller.toggleNavigation(event);
 
-    expect(toggleNavigation).toHaveBeenCalledWith(event);
+    expect(toggle).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
   });
 
   it('does not initialize the menu when disconnected before the context resolves', async () => {
-    let resolveContext!:(context:unknown) => void;
-    window.OpenProject = {
-      getPluginContext: () => new Promise((resolve) => { resolveContext = resolve; }),
-    } as unknown as typeof window.OpenProject;
+    const resolveContext = stubPendingPluginContext();
 
     const controller = await renderToggle();
     const button = ctx.container.querySelector('button')!;
@@ -106,7 +98,7 @@ describe('Main menu toggle controller', () => {
     resolveContext(pluginContext());
     await ctx.nextFrame();
 
-    expect(initializeMenu).not.toHaveBeenCalled();
+    expect(syncWithPage).not.toHaveBeenCalled();
     expect(controller.pluginContext).toBeInstanceOf(Promise);
   });
 });

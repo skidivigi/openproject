@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -105,4 +104,33 @@ export function closestDragBlockingElement(el:Element|null, stopAt:Element|null 
   }
 
   return null;
+}
+
+const nonTextInputTypes = new Set([
+  'checkbox',
+  'radio',
+  'button',
+  'submit',
+  'reset',
+  'file',
+  'range',
+  'color',
+  'image',
+  'hidden',
+]);
+
+export function isTextEditable(el:EventTarget|null):boolean {
+  if (!(el instanceof HTMLElement)) return false;
+  if (el instanceof HTMLInputElement) return !el.disabled && !nonTextInputTypes.has(el.type);
+  if (el instanceof HTMLTextAreaElement) return !el.disabled;
+
+  return el.isContentEditable;
+}
+
+export function isInsideDisabledControl(el:Element|null):boolean {
+  return el?.closest('[aria-disabled="true"]') != null;
+}
+
+export function isInsideMenuControl(el:Element|null):boolean {
+  return el?.closest('[role="menu"], [aria-haspopup="menu"]') != null;
 }

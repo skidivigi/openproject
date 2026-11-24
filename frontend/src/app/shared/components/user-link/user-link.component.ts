@@ -20,15 +20,13 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
 
 import { ChangeDetectionStrategy, Component, Input, inject } from '@angular/core';
 import { UserResource } from 'core-app/features/hal/resources/user-resource';
-import { I18nService } from 'core-app/core/i18n/i18n.service';
 import { PathHelperService } from 'core-app/core/path-helper/path-helper.service';
 
 @Component({
@@ -39,7 +37,6 @@ import { PathHelperService } from 'core-app/core/path-helper/path-helper.service
         data-hover-card-trigger-target="trigger"
         [attr.data-hover-card-url]="hoverCardUrl"
         [attr.href]="href"
-        [attr.title]="label"
         [textContent]="name">
       </a>
     }
@@ -51,7 +48,6 @@ import { PathHelperService } from 'core-app/core/path-helper/path-helper.service
   standalone: false,
 })
 export class UserLinkComponent {
-  readonly I18n = inject(I18nService);
   readonly pathHelperService = inject(PathHelperService);
 
   @Input() user:UserResource;
@@ -62,10 +58,6 @@ export class UserLinkComponent {
 
   public get name() {
     return this.user?.name;
-  }
-
-  public get label() {
-    return this.I18n.t('js.label_author', { user: this.name });
   }
 
   public get hoverCardUrl() {

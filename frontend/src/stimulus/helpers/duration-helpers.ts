@@ -20,15 +20,15 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
 
 export function displayDuration(duration:number):string {
-  const hours = Math.floor(duration);
-  const minutes = Math.round((duration - hours) * 60);
+  const totalMinutes = Math.round(duration * 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
 
   if (minutes === 0) {
     return `${hours}h`;

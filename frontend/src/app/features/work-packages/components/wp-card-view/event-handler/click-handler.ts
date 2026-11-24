@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -34,6 +33,7 @@ import { WorkPackageViewFocusService } from 'core-app/features/work-packages/rou
 import { WorkPackageCardViewService } from 'core-app/features/work-packages/components/wp-card-view/services/wp-card-view.service';
 import { DeviceService } from 'core-app/core/browser/device.service';
 import { LazyInject } from 'core-app/shared/helpers/angular/lazy-inject.decorator';
+import { isInsideDisabledControl, isInsideMenuControl } from 'core-common/interactive-element-helper';
 import { EventType } from 'core-app/features/work-packages/routing/wp-view-base/event-handling/event-handler-registry';
 
 export class CardClickHandler implements CardEventHandler {
@@ -47,7 +47,7 @@ export class CardClickHandler implements CardEventHandler {
   @LazyInject() wpCardView:WorkPackageCardViewService;
 
   constructor(public readonly injector:Injector,
-    card:WorkPackageCardViewComponent) {
+    _card:WorkPackageCardViewComponent) {
   }
 
   public get EVENT():EventType {
@@ -67,6 +67,10 @@ export class CardClickHandler implements CardEventHandler {
 
     // Ignore links
     if (target instanceof HTMLAnchorElement || target.parentElement instanceof HTMLAnchorElement) {
+      return true;
+    }
+
+    if (isInsideDisabledControl(target) || isInsideMenuControl(target)) {
       return true;
     }
 

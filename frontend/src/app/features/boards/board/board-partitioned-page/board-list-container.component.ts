@@ -183,6 +183,11 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
         // Update split screen
         const routingId = resolveRoutingId(this.wpStates, selection.focusedWorkPackage!);
         const base = this.pathHelper.boardDetailsPath(this.currentProject.identifier, id, routingId);
+        const currentPath = window.location.pathname;
+        if (currentPath === base || currentPath.startsWith(`${base}/`)) {
+          return;
+        }
+
         const search = window.location.search;
         Turbo.visit(search ? `${base}${search}` : base, { frame: 'content-bodyRight', action: 'advance' });
       });
@@ -198,12 +203,12 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
     this.saveBoard(board);
   }
 
-  addList(board:Board):any {
+  addList(board:Board):Promise<unknown>|undefined {
     if (board.isFree) {
       return this.BoardList
         .addFreeQuery(board, { name: this.text.unnamedList })
         .then((board) => this.Boards.save(board).toPromise())
-        .catch((error) => this.showError(error));
+        .catch((error) => this.showError(error as string));
     }
     const active = this.getActionFiltersFromWidget(board);
     this.opModalService.show(
@@ -211,6 +216,7 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
       this.injector,
       { board, active },
     );
+    return undefined;
   }
 
   changeVisibilityOfList(
@@ -341,7 +347,7 @@ export class BoardListContainerComponent extends UntilDestroyedMixin implements 
 
           return id === listId;
         })
-        .forEach((listComponent) => listComponent.refreshQueryUnlessCaused(query, false));
+        .forEach((listComponent) => listComponent.refreshQueryIfOutdated(query, false));
     });
   }
 

@@ -20,14 +20,14 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
 
 import { ChangeDetectionStrategy, Component, OnInit, ViewEncapsulation, inject } from '@angular/core';
-import { distinctUntilChanged, map } from 'rxjs/operators';
+import { Observable } from 'rxjs';
+import { distinctUntilChanged, map, tap } from 'rxjs/operators';
 
 import {
   PartitionedQuerySpacePageComponent,
@@ -217,12 +217,9 @@ export class IFCViewerPageComponent
   /**
    * Initialize the BcfViewService when the query of the isolated space is loaded
    */
-  public loadQuery(firstPage = false):Promise<QueryResource> {
-    return super.loadQuery(firstPage)
-      .then((query) => {
-        this.bcfView.initialize(query, query.results);
-        return query;
-      });
+  protected override loadQuery$(firstPage = false):Observable<QueryResource> {
+    return super.loadQuery$(firstPage)
+      .pipe(tap((query) => this.bcfView.initialize(query, query.results)));
   }
 
   /**

@@ -22,8 +22,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # See COPYRIGHT and LICENSE files for more details.
 #++
@@ -32,7 +31,6 @@ module API
   module V3
     module WorkPackages
       class WorkPackageRepresenter < ::API::Decorators::Single
-        include API::Decorators::LinkedResource
         include API::V3::Workspaces::LinkedResource
         include API::Decorators::DateProperty
         include API::Decorators::FormattableProperty
@@ -131,6 +129,17 @@ module API
           }
         end
 
+        link :exportPdf,
+             cache_if: -> { export_work_packages_allowed? } do
+          next if represented.new_record?
+
+          {
+            href: api_v3_paths.work_package_pdf(represented.id),
+            type: "application/pdf",
+            title: "Export as PDF"
+          }
+        end
+
         link :generate_pdf,
              cache_if: -> { export_work_packages_allowed? } do
           next if represented.new_record?
@@ -150,6 +159,16 @@ module API
             href: work_package_path(id: represented.id, format: :atom),
             type: "application/rss+xml",
             title: "Atom feed"
+          }
+        end
+
+        link :markdown do
+          next if represented.new_record?
+
+          {
+            href: work_package_path(id: represented.id, format: :md),
+            type: "text/markdown",
+            title: I18n.t(:label_markdown_version)
           }
         end
 
@@ -438,6 +457,26 @@ module API
 
         date_time_property :updated_at
 
+        property :origin_source,
+                 as: :originSource,
+                 render_nil: false,
+                 writable: false
+
+        property :origin_id,
+                 as: :originId,
+                 render_nil: false,
+                 writable: false
+
+        property :origin_host,
+                 as: :originHost,
+                 render_nil: false,
+                 writable: false
+
+        property :origin_url,
+                 as: :originUrl,
+                 render_nil: false,
+                 writable: false
+
         property :relations,
                  embedded: true,
                  exec_context: :decorator,
@@ -462,7 +501,43 @@ module API
                    (variant.present? && project&.available_custom_fields_for_variant(variant.id)&.any?) || false
                  end
 
-        associated_resource :category
+        # Deprecated in favor of `categories`
+        # Removed from the API if multiple categories is enabled on the instance
+        associated_resource :category,
+                            show_if: ->(*) { !Setting::WorkPackageMultipleCategories.active? },
+                            getter: ->(*) {
+                              next unless embed_link?(:category)
+
+                              category = represented.effective_category
+                              next unless category
+
+                              ::API::V3::Categories::CategoryRepresenter.create(category, current_user:)
+                            },
+                            link: ->(*) {
+                              next if Setting::WorkPackageMultipleCategories.active?
+
+                              category = represented.effective_category
+                              next({ href: nil }) if category.nil?
+
+                              ::API::Decorators::LinkObject
+                                .new(category,
+                                     property_name: :itself,
+                                     path: :category,
+                                     getter: :id,
+                                     title_attribute: :name)
+                                .to_hash
+                            },
+                            setter: ->(fragment:, **) do
+                              represented.category_ids = parse_link_ids_from_fragment([fragment], :category).compact
+                            end
+
+        associated_resources :effective_categories,
+                             as: :categories,
+                             v3_path: :category,
+                             representer: ::API::V3::Categories::CategoryRepresenter,
+                             setter: ->(fragment:, **) do
+                               represented.category_ids = parse_link_ids_from_fragment(fragment, :category).compact
+                             end
 
         associated_resource :type
 
@@ -505,8 +580,9 @@ module API
                                                                .to_s
                  end
 
-        link :projectPhaseDefinition do
-          if phase_set_and_active? && view_project_phase_allowed?
+        link(:projectPhaseDefinition,
+             cache_if: -> { view_project_phase_allowed? }) do
+          if phase_set_and_active?
             {
               href: api_v3_paths.project_phase_definition(represented.project_phase_definition_id),
               title: project_phase.name
@@ -540,7 +616,7 @@ module API
                             link: ::API::V3::Principals::PrincipalRepresenterFactory
                               .create_link_lambda(:assigned_to)
 
-        # Deprecated in favour of `targetVersions`
+        # Deprecated in favor of `targetVersions`
         # Removed from the API if multiple_versions is enabled on the instance
         associated_resource :version,
                             v3_path: :version,
@@ -572,78 +648,38 @@ module API
                               represented.target_version_ids = parse_link_ids_from_fragment([fragment], :version).compact
                             end
 
-        associated_resources :target_versions,
+        associated_resources :effective_target_versions,
+                             as: :target_versions,
                              v3_path: :version,
                              representer: ::API::V3::Versions::VersionRepresenter,
-                             getter: ->(*) {
-                               next unless embed_link?(:target_versions)
-
-                               represented.effective_target_versions.map do |version|
-                                 ::API::V3::Versions::VersionRepresenter.create(version, current_user:)
-                               end
-                             },
-                             link: ->(*) {
-                               represented.effective_target_versions.map do |version|
-                                 ::API::Decorators::LinkObject
-                                   .new(version,
-                                        property_name: :itself,
-                                        path: :version,
-                                        getter: :id,
-                                        title_attribute: :name)
-                                   .to_hash
-                               end
-                             },
                              setter: ->(fragment:, **) do
                                represented.target_version_ids = parse_link_ids_from_fragment(fragment, :version).compact
                              end
 
-        associated_resources :observed_in_versions,
+        associated_resources :effective_observed_in_versions,
+                             as: :observed_in_versions,
                              v3_path: :version,
                              representer: ::API::V3::Versions::VersionRepresenter,
-                             getter: ->(*) {
-                               next unless embed_link?(:observed_in_versions)
-
-                               represented.effective_observed_in_versions.map do |version|
-                                 ::API::V3::Versions::VersionRepresenter.create(version, current_user:)
-                               end
-                             },
-                             link: ->(*) {
-                               represented.effective_observed_in_versions.map do |version|
-                                 ::API::Decorators::LinkObject
-                                   .new(version,
-                                        property_name: :itself,
-                                        path: :version,
-                                        getter: :id,
-                                        title_attribute: :name)
-                                   .to_hash
-                               end
-                             },
                              setter: ->(fragment:, **) do
                                represented.observed_in_version_ids = parse_link_ids_from_fragment(fragment, :version).compact
                              end
 
-        associated_resources :labels,
-                             skip_render: ->(*) { !OpenProject::FeatureDecisions.work_package_labels_active? },
+        associated_resources :effective_labels,
+                             as: :labels,
+                             v3_path: :label,
                              getter: ->(*) {
                                next unless embed_link?(:labels)
 
-                               represented.effective_labels.map do |label|
+                               represented.effective_labels.select(&:persisted?).map do |label|
                                  ::API::V3::Labels::LabelRepresenter.create(label, current_user:)
                                end
                              },
-                             link: ->(*) {
-                               next unless OpenProject::FeatureDecisions.work_package_labels_active?
-
-                               represented.effective_labels.map do |label|
-                                 ::API::Decorators::LinkObject
-                                   .new(label,
-                                        property_name: :itself,
-                                        path: :label,
-                                        getter: :id,
-                                        title_attribute: :name)
-                                   .to_hash
-                               end
-                             }
+                             setter: ->(fragment:, **) do
+                               with_href, without_href = fragment.partition { it["href"].present? }
+                               represented.label_ids = parse_link_ids_from_fragment(with_href, :label)
+                               names = parse_new_record_titles_from_fragment(without_href)
+                               represented.label_names = names if names.any?
+                             end
 
         associated_resource :parent,
                             v3_path: :work_package,
@@ -831,6 +867,7 @@ module API
                                 attachments
                                 target_versions
                                 observed_in_versions
+                                categories
                                 labels]
 
         # The dynamic class generation introduced because of the custom fields interferes with
@@ -848,7 +885,8 @@ module API
            Setting.show_work_package_attachments,
            Setting.feeds_enabled?,
            Setting::WorkPackageIdentifier.semantic?,
-           Setting::WorkPackageMultipleVersions.active?]
+           Setting::WorkPackageMultipleVersions.active?,
+           Setting::WorkPackageMultipleCategories.active?]
         end
 
         def load_complete_model(model)

@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -30,6 +29,13 @@ import { KeepTabService } from 'core-app/features/work-packages/components/wp-si
 import { CurrentProjectService } from 'core-app/core/current-project/current-project.service';
 import { PathHelperService } from 'core-app/core/path-helper/path-helper.service';
 import { UrlParamsService } from 'core-app/core/navigation/url-params.service';
+import { withTooltip } from 'core-app/shared/helpers/tooltip-helper';
+import { TooltipDirection } from 'core-app/shared/components/primer/tool-tip-element';
+
+export interface UiStateLink {
+  link:HTMLAnchorElement;
+  element:DocumentFragment;
+}
 
 export const uiStateLinkClass = '__ui-state-link';
 
@@ -42,11 +48,17 @@ export class UiStateLinkBuilder {
   ) {
   }
 
-  public linkToDetails(workPackageId:string, title:string, content:string, routingId?:string) {
-    return this.build(workPackageId, 'split', title, content, routingId);
+  public linkToDetails(
+    workPackageId:string,
+    title:string,
+    content:string,
+    routingId?:string,
+    tooltipDirection?:TooltipDirection,
+  ):UiStateLink {
+    return this.build(workPackageId, 'split', title, content, routingId, tooltipDirection);
   }
 
-  public linkToShow(workPackageId:string, title:string, content:string, routingId?:string) {
+  public linkToShow(workPackageId:string, title:string, content:string, routingId?:string):UiStateLink {
     return this.build(workPackageId, 'show', title, content, routingId);
   }
 
@@ -62,7 +74,14 @@ export class UiStateLinkBuilder {
    * and call preventDefault() — the href is never followed during normal
    * in-table clicks. It only matters for right-click / open-in-new-tab.
    */
-  private build(workPackageId:string, state:'show'|'split', title:string, content:string, routingId?:string) {
+  private build(
+    workPackageId:string,
+    state:'show'|'split',
+    title:string,
+    content:string,
+    routingId?:string,
+    tooltipDirection?:TooltipDirection,
+  ):UiStateLink {
     const a = document.createElement('a');
     const idForHref = routingId ?? workPackageId;
     let href:string;
@@ -81,9 +100,14 @@ export class UiStateLinkBuilder {
     a.dataset.workPackageId = workPackageId;
     a.dataset.wpState = state;
 
-    a.setAttribute('title', title);
     a.textContent = content;
 
-    return a;
+    const tooltipText = title === content ? '' : title;
+    const tooltipType = content ? 'description' : 'label';
+
+    return {
+      link: a,
+      element: withTooltip(a, tooltipText, tooltipType, tooltipDirection),
+    };
   }
 }

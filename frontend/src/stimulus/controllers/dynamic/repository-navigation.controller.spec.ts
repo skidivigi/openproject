@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -30,14 +29,13 @@ import { waitFor } from '@testing-library/dom';
 import { of } from 'rxjs';
 import { vi, type Mock } from 'vitest';
 
-import { setupStimulusTest, type StimulusTestContext } from 'core-stimulus/test-helpers';
+import { setupStimulusTest, type StimulusTestContext, stubPendingPluginContext, stubPluginContext } from 'core-stimulus/test-helpers';
 import type RepositoryNavigationControllerType from './repository-navigation.controller';
 
 describe('Repository navigation controller', () => {
   let ctx:StimulusTestContext;
   let RepositoryNavigationController:typeof RepositoryNavigationControllerType;
   let get:Mock;
-  let originalOpenProject:typeof window.OpenProject;
 
   beforeAll(async () => {
     ({ default: RepositoryNavigationController } = await import('./repository-navigation.controller'));
@@ -45,10 +43,7 @@ describe('Repository navigation controller', () => {
 
   beforeEach(async () => {
     get = vi.fn().mockReturnValue(of('<div class="loaded-entry"></div>'));
-    originalOpenProject = window.OpenProject;
-    window.OpenProject = {
-      getPluginContext: () => Promise.resolve({ services: { http: { get } } }),
-    } as unknown as typeof window.OpenProject;
+    stubPluginContext({ services: { http: { get } } });
 
     ctx = await setupStimulusTest({
       controllers: { 'repository-navigation': RepositoryNavigationController },
@@ -57,7 +52,6 @@ describe('Repository navigation controller', () => {
 
   afterEach(() => {
     ctx.dispose();
-    window.OpenProject = originalOpenProject;
     vi.restoreAllMocks();
   });
 
@@ -74,6 +68,41 @@ describe('Repository navigation controller', () => {
     `);
     return ctx.getController<RepositoryNavigationControllerType>('repository-navigation');
   }
+
+  async function renderWithTag(revision:string) {
+    await ctx.mount(`
+      <div data-controller="repository-navigation">
+        <form data-repository-navigation-target="form">
+          <input data-repository-navigation-target="revision" value="${revision}">
+          <select data-repository-navigation-target="tag">
+            <option value=""></option>
+            <option value="v1.0" selected>v1.0</option>
+          </select>
+        </form>
+        <div data-repository-navigation-target="repoBrowser"></div>
+      </div>
+    `);
+    return ctx.getController<RepositoryNavigationControllerType>('repository-navigation');
+  }
+
+  it('clears the revision box when viewing a tag', async () => {
+    await renderWithTag('v1.0');
+
+    expect(ctx.container.querySelector('input')).toHaveValue('');
+  });
+
+  it('leaves the tag out of the submitted form', async () => {
+    const controller = await renderWithTag('');
+    const tag = ctx.container.querySelector('select')!;
+    const form = ctx.container.querySelector('form')!;
+    let tagDisabledOnSubmit:boolean|undefined;
+    vi.spyOn(form, 'submit').mockImplementation(() => { tagDisabledOnSubmit = tag.disabled; });
+
+    controller.sendForm();
+
+    expect(tagDisabledOnSubmit).toBe(true);
+    expect(tag).toBeEnabled();
+  });
 
   it('binds the declared services after connect', async () => {
     const controller = await renderBrowser();
@@ -103,10 +132,7 @@ describe('Repository navigation controller', () => {
   });
 
   it('does not load when disconnected before the context resolves', async () => {
-    let resolveContext!:(context:unknown) => void;
-    window.OpenProject = {
-      getPluginContext: () => new Promise((resolve) => { resolveContext = resolve; }),
-    } as unknown as typeof window.OpenProject;
+    const resolveContext = stubPendingPluginContext();
 
     const controller = await renderBrowser();
     const root = ctx.container.querySelector('[data-controller="repository-navigation"]')!;

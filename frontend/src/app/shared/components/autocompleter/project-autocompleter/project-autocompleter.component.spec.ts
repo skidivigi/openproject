@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -39,6 +38,7 @@ import { IProjectAutocompleteItem } from './project-autocomplete-item';
 
 interface MatchingItemsAccess {
   matchingItems(elements:IProjectAutocompleteItem[], matching:string):Observable<IProjectAutocompleteItem[]>;
+  disableSelectedItems(projects:IProjectAutocompleteItem[], value:unknown):IProjectAutocompleteItem[];
 }
 
 describe('ProjectAutocompleterComponent', () => {
@@ -100,5 +100,17 @@ describe('ProjectAutocompleterComponent', () => {
     const noIdentifier = [project({ id: 3, href: '/api/v3/projects/3', name: 'No Identifier Project' })];
 
     await expect(matchingItems('zzz', noIdentifier)).resolves.toEqual([]);
+  });
+
+  it.each([
+    ['a scalar ID', 2],
+    ['an object with an empty href', { id: 2, href: '' }],
+  ])('disables the project selected by %s', (_label, selected) => {
+    component.multiple = true;
+    const hrefless = [project({ id: 1, href: '' }), project({ id: 2, href: '' })];
+
+    const result = (component as unknown as MatchingItemsAccess).disableSelectedItems(hrefless, [selected]);
+
+    expect(result.map(item => item.disabled)).toEqual([false, true]);
   });
 });

@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -29,14 +28,13 @@
 import { waitFor } from '@testing-library/dom';
 import { vi, type Mock } from 'vitest';
 
-import { setupStimulusTest, type StimulusTestContext } from 'core-stimulus/test-helpers';
+import { setupStimulusTest, type StimulusTestContext, stubPendingPluginContext, stubPluginContext } from 'core-stimulus/test-helpers';
 import type MainMenuControllerType from './main.controller';
 
 describe('Main menu controller', () => {
   let ctx:StimulusTestContext;
   let MainMenuController:typeof MainMenuControllerType;
   let next:Mock;
-  let originalOpenProject:typeof window.OpenProject;
 
   const pluginContext = () => ({
     injector: { get: () => ({ navigationEvents$: { next } }) },
@@ -48,10 +46,7 @@ describe('Main menu controller', () => {
 
   beforeEach(async () => {
     next = vi.fn();
-    originalOpenProject = window.OpenProject;
-    window.OpenProject = {
-      getPluginContext: () => Promise.resolve(pluginContext()),
-    } as unknown as typeof window.OpenProject;
+    stubPluginContext(pluginContext());
 
     ctx = await setupStimulusTest({
       controllers: { 'menus--main': MainMenuController },
@@ -60,7 +55,6 @@ describe('Main menu controller', () => {
 
   afterEach(() => {
     ctx.dispose();
-    window.OpenProject = originalOpenProject;
     vi.restoreAllMocks();
   });
 
@@ -93,10 +87,7 @@ describe('Main menu controller', () => {
   });
 
   it('publishes nothing when disconnected before the context resolves', async () => {
-    let resolveContext!:(context:unknown) => void;
-    window.OpenProject = {
-      getPluginContext: () => new Promise((resolve) => { resolveContext = resolve; }),
-    } as unknown as typeof window.OpenProject;
+    const resolveContext = stubPendingPluginContext();
 
     await renderMenu();
     const root = ctx.container.querySelector('[data-controller="menus--main"]')!;

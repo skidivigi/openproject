@@ -22,13 +22,17 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
 #
 # See COPYRIGHT and LICENSE files for more details.
 #++
 
-if Rails.env.development? && ENV["OPENPROJECT_RACK_PROFILER_ENABLED"]
+if Rails.env.local? && ENV["OPENPROJECT_RACK_PROFILER_ENABLED"]
+  # Apply patching to Net::HTTP via prepend, since other gems (opentelemetry e.g.)
+  # will conflict when using method aliasing.
+  # See https://github.com/MiniProfiler/rack-mini-profiler/pull/444
+  require "prepend_net_http_patch"
+
   require "rack-mini-profiler"
   require "flamegraph"
   require "stackprof"
@@ -37,4 +41,14 @@ if Rails.env.development? && ENV["OPENPROJECT_RACK_PROFILER_ENABLED"]
   Rack::MiniProfilerRails.initialize!(Rails.application)
 
   Rack::MiniProfiler.config.position = "bottom-right"
+
+  # NOTE: Rack Mini Profiler is generally safe to use in production, e.g.
+  #       by only allowing special users to access it.
+  #       HOWEVER, memory and GC profiler should NEVER be enabled in production,
+  #       as they can expose memory containing secrets.
+  if Rails.env.local?
+    require "memory_profiler"
+
+    Rack::MiniProfiler.config.enable_advanced_debugging_tools = true
+  end
 end

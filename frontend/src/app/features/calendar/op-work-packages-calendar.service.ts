@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -84,7 +83,7 @@ import { resolveRoutingId } from 'core-app/features/work-packages/helpers/work-p
 import {
   WorkPackageViewContextMenu,
 } from 'core-app/shared/components/op-context-menu/wp-context-menu/wp-view-context-menu.directive';
-import { OPContextMenuService } from 'core-app/shared/components/op-context-menu/op-context-menu.service';
+import { OpActionMenuService } from 'core-app/shared/components/op-context-menu/action-menu/op-action-menu.service';
 import { OpCalendarService } from 'core-app/features/calendar/op-calendar.service';
 import { WeekdayService } from 'core-app/core/days/weekday.service';
 import { IDay } from 'core-app/core/state/days/day.model';
@@ -117,7 +116,7 @@ export class OpWorkPackagesCalendarService extends UntilDestroyedMixin {
   readonly urlParamsService = inject(UrlParamsService);
   readonly halEditing = inject(HalResourceEditingService);
   readonly wpTableSelection = inject(WorkPackageViewSelectionService);
-  readonly contextMenuService = inject(OPContextMenuService);
+  readonly actionMenuService = inject(OpActionMenuService);
   readonly calendarService = inject(OpCalendarService);
   readonly weekdayService = inject(WeekdayService);
   readonly dayService = inject(DayResourceService);
@@ -330,7 +329,7 @@ export class OpWorkPackagesCalendarService extends UntilDestroyedMixin {
     Turbo.visit(this.pathHelper.workPackagePath(resolveRoutingId(this.states, id)));
   }
 
-  public onCardClicked({ workPackageId, event }:{ workPackageId:string, event:MouseEvent }):void {
+  public onCardClicked({ workPackageId, event }:{ workPackageId:string, event:MouseEvent|KeyboardEvent }):void {
     if (isClickedWithModifier(event)) {
       return;
     }
@@ -347,10 +346,6 @@ export class OpWorkPackagesCalendarService extends UntilDestroyedMixin {
   }
 
   public showEventContextMenu({ workPackageId, event }:{ workPackageId:string, event:MouseEvent }):void {
-    if (isClickedWithModifier(event)) {
-      return;
-    }
-
     // We want to keep the original context menu on hrefs
     // (currently, this is only the id)
     if ((event.target as HTMLElement).closest(`.${uiStateLinkClass}`)) {
@@ -364,7 +359,7 @@ export class OpWorkPackagesCalendarService extends UntilDestroyedMixin {
     event.preventDefault();
 
     const handler = new WorkPackageViewContextMenu(this.injector, workPackageId, event.target as HTMLElement);
-    this.contextMenuService.show(handler, event);
+    this.actionMenuService.show(handler, event);
   }
 
   private defaultOptions():CalendarOptions {
@@ -415,8 +410,8 @@ export class OpWorkPackagesCalendarService extends UntilDestroyedMixin {
   }
 
   private get initializingWithQueryProps():boolean {
-    // Initialise with current query props
-    // If the filters are empty, they still need to be initialised (with empty props)
+    // Initialize with current query props
+    // If the filters are empty, they still need to be initialized (with empty props)
     return (this.areFiltersEmpty || this.urlParams.query_props) as boolean;
   }
 

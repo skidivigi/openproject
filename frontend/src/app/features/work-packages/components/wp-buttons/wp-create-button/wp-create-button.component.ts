@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -55,14 +54,11 @@ export class WorkPackageCreateButtonComponent extends UntilDestroyedMixin implem
 
   allowed:boolean;
 
-  disabled:boolean;
+  createPaneOpen:boolean;
 
   projectIdentifier:string|null;
 
-  types:any;
-
   text = {
-    title: this.I18n.t('js.work_packages.create.title'),
     createWithDropdown: this.I18n.t('js.work_packages.create.button'),
     createButton: this.I18n.t('js.label_work_package'),
     explanation: this.I18n.t('js.label_create_work_package'),
@@ -88,7 +84,7 @@ export class WorkPackageCreateButtonComponent extends UntilDestroyedMixin implem
   }
 
   private updateDisabledState() {
-    this.disabled = !this.allowed || this.urlParams.isCreatePaneOpen();
+    this.createPaneOpen = this.urlParams.isCreatePaneOpen();
     this.cdRef.detectChanges();
   }
 }

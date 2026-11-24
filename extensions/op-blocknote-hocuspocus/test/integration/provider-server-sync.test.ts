@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -47,7 +46,7 @@ const PORT = 9678;
 // and validates they match. createTestToken() defaults to this URL.
 const DOC_NAME = "https://test.api/api/v3/documents/1";
 
-// setup.ts runs msw with onUnhandledRequest:'error', which also patches the global
+// setup.ts runs msw with onUnhandledFrame:'error', which also patches the global
 // WebSocket. Passthrough the connection to the in-process server so the real client
 // transport is exercised; Rails calls to test.api stay mocked by the default handlers.
 const socketLink = ws.link(`ws://127.0.0.1:${PORT}`);

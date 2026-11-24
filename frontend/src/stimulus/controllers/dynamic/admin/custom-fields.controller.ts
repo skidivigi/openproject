@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -138,6 +137,12 @@ export default class CustomFieldsController extends Controller {
       .querySelector('.custom-option-id')
       ?.remove();
 
+    const projectCell = dup.querySelector('.custom-option-project');
+    if (projectCell) { projectCell.textContent = ''; }
+
+    const deleteLink = dup.querySelector('.delete-custom-option');
+    if (deleteLink) { deleteLink.setAttribute('href', deleteLink.getAttribute('href')!.replace(/\/\d+$/, '/0')); }
+
     const defaultValueCheckbox = dup.querySelector<HTMLInputElement>('input[type="checkbox"]');
     const defaultValueHidden = dup.querySelector<HTMLInputElement>('input[type="hidden"]');
     if (!defaultValueCheckbox || !defaultValueHidden) { return false; }
@@ -147,6 +152,8 @@ export default class CustomFieldsController extends Controller {
     defaultValueCheckbox.setAttribute('name', `custom_field[custom_options_attributes][${count}][default_value]`);
     defaultValueCheckbox.setAttribute('id', `custom_field_custom_options_attributes_${count}_default_value`);
     defaultValueCheckbox.checked = false;
+    defaultValueCheckbox.disabled = false;
+    defaultValueHidden.disabled = false;
 
     last.insertAdjacentElement('afterend', dup);
 

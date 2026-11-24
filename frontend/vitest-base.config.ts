@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -46,6 +45,19 @@ export default defineConfig({
         }
       },
     },
+    {
+      // @angular/build < 22.2 copies the plugins above into the inline project it declares.
+      // Since Vitest 5 that project also inherits this file, so each plugin would apply twice.
+      name: 'op-do-not-extend-runner-config',
+      enforce: 'post',
+      config(config) {
+        config.test?.projects?.forEach((project) => {
+          if (typeof project === 'object') {
+            Object.assign(project, { extends: false });
+          }
+        });
+      },
+    },
   ],
   test: {
     // The builder defaults this to `false` to mimic Karma/Jasmine, which makes
@@ -55,12 +67,28 @@ export default defineConfig({
     // the loser sees a real function where it expects a spy.
     isolate: true,
 
+    // `ng test` has no --shard flag. CI sets this to `<index>/<count>`.
+    shard: process.env.VITEST_SHARD,
+
     // jquery-migrate prints this banner to stdout at import time. It is
     // expected, carries no signal, and would otherwise appear once per worker.
     // Filtering here (reporter level) keeps it out of the output without
     // mutating the global `console`, which is the idiomatic Vitest mechanism.
     onConsoleLog(log:string):boolean | void {
       if (log.includes('JQMIGRATE: Migrate is installed')) {
+        return false;
+      }
+
+      // CKEditor warns about toolbar items whose plugins the specs leave
+      // unconfigured (image upload, macros, preview).
+      if (log.includes('toolbarview-item-unavailable')) {
+        return false;
+      }
+
+      // CKEditor's toolbar and editable observe their own size. On slow CI
+      // runners a resize spans two frames and the browser fires a benign
+      // ErrorEvent without `error`, which Vitest logs instead of failing.
+      if (log.includes('ResizeObserver loop')) {
         return false;
       }
 

@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -29,14 +28,13 @@
 import { waitFor } from '@testing-library/dom';
 import { vi, type Mock } from 'vitest';
 
-import { setupStimulusTest, type StimulusTestContext } from 'core-stimulus/test-helpers';
+import { setupStimulusTest, type StimulusTestContext, stubPendingPluginContext, stubPluginContext } from 'core-stimulus/test-helpers';
 import type RecurringMeetingsFormControllerType from './form.controller';
 
 describe('Recurring meetings form controller', () => {
   let ctx:StimulusTestContext;
   let RecurringMeetingsFormController:typeof RecurringMeetingsFormControllerType;
   let request:Mock;
-  let originalOpenProject:typeof window.OpenProject;
 
   beforeAll(async () => {
     ({ default: RecurringMeetingsFormController } = await import('./form.controller'));
@@ -44,15 +42,12 @@ describe('Recurring meetings form controller', () => {
 
   beforeEach(async () => {
     request = vi.fn().mockResolvedValue({ html: '', headers: new Headers() });
-    originalOpenProject = window.OpenProject;
-    window.OpenProject = {
-      getPluginContext: () => Promise.resolve({
-        services: {
-          turboRequests: { request },
-          pathHelperService: { staticBase: '/op' },
-        },
-      }),
-    } as unknown as typeof window.OpenProject;
+    stubPluginContext({
+      services: {
+        turboRequests: { request },
+        pathHelperService: { staticBase: '/op' },
+      },
+    });
 
     ctx = await setupStimulusTest({
       controllers: { 'recurring-meetings--form': RecurringMeetingsFormController },
@@ -61,7 +56,6 @@ describe('Recurring meetings form controller', () => {
 
   afterEach(() => {
     ctx.dispose();
-    window.OpenProject = originalOpenProject;
     vi.restoreAllMocks();
   });
 
@@ -101,13 +95,26 @@ describe('Recurring meetings form controller', () => {
     expect(url).toContain('specific_date');
     expect(url).toContain('2026-08-11');
     expect(url).toContain('iterations');
+    expect(request.mock.calls[0][3]).toBe('recurring-meeting-humanize-schedule');
+  });
+
+  it('settles quietly when a newer request replaces the schedule request', async () => {
+    const controller = await renderForm();
+    request.mockRejectedValueOnce(new DOMException('The user aborted a request.', 'AbortError'));
+
+    await expect(controller.updateFrequencyText()).resolves.toBeUndefined();
+  });
+
+  it('rejects when the schedule request fails', async () => {
+    const controller = await renderForm();
+    const failure = new Error('Internal Server Error');
+    request.mockRejectedValueOnce(failure);
+
+    await expect(controller.updateFrequencyText()).rejects.toBe(failure);
   });
 
   it('does not request when disconnected before the context resolves', async () => {
-    let resolveContext!:(context:unknown) => void;
-    window.OpenProject = {
-      getPluginContext: () => new Promise((resolve) => { resolveContext = resolve; }),
-    } as unknown as typeof window.OpenProject;
+    const resolveContext = stubPendingPluginContext();
 
     const controller = await renderForm();
     const form = ctx.container.querySelector('form')!;

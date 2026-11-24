@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -29,14 +28,13 @@
 import { waitFor } from '@testing-library/dom';
 import { vi, type Mock } from 'vitest';
 
-import { setupStimulusTest, type StimulusTestContext } from 'core-stimulus/test-helpers';
+import { setupStimulusTest, type StimulusTestContext, stubPendingPluginContext, stubPluginContext } from 'core-stimulus/test-helpers';
 import type SubmitControllerType from './submit.controller';
 
 describe('Meetings submit controller', () => {
   let ctx:StimulusTestContext;
   let SubmitController:typeof SubmitControllerType;
   let request:Mock;
-  let originalOpenProject:typeof window.OpenProject;
 
   beforeAll(async () => {
     ({ default: SubmitController } = await import('./submit.controller'));
@@ -44,10 +42,7 @@ describe('Meetings submit controller', () => {
 
   beforeEach(async () => {
     request = vi.fn().mockResolvedValue({ html: '', headers: new Headers() });
-    originalOpenProject = window.OpenProject;
-    window.OpenProject = {
-      getPluginContext: () => Promise.resolve({ services: { turboRequests: { request } } }),
-    } as unknown as typeof window.OpenProject;
+    stubPluginContext({ services: { turboRequests: { request } } });
 
     ctx = await setupStimulusTest({
       controllers: { 'meetings--submit': SubmitController },
@@ -56,7 +51,6 @@ describe('Meetings submit controller', () => {
 
   afterEach(() => {
     ctx.dispose();
-    window.OpenProject = originalOpenProject;
     vi.restoreAllMocks();
   });
 
@@ -96,10 +90,7 @@ describe('Meetings submit controller', () => {
   });
 
   it('does not send when disconnected before the context resolves', async () => {
-    let resolveContext!:(context:unknown) => void;
-    window.OpenProject = {
-      getPluginContext: () => new Promise((resolve) => { resolveContext = resolve; }),
-    } as unknown as typeof window.OpenProject;
+    const resolveContext = stubPendingPluginContext();
 
     const controller = await renderActions();
     const root = ctx.container.querySelector('[data-controller="meetings--submit"]')!;

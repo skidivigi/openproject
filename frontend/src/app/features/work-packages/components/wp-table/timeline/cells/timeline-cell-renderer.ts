@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -34,7 +33,8 @@ import { Highlighting } from 'core-app/features/work-packages/components/wp-fast
 import { HierarchyRenderPass } from 'core-app/features/work-packages/components/wp-fast-table/builders/modes/hierarchy/hierarchy-render-pass';
 import { WorkPackageViewTimelineService } from 'core-app/features/work-packages/routing/wp-view-base/view-services/wp-view-timeline.service';
 import { WorkPackageChangeset } from 'core-app/features/work-packages/components/wp-edit/work-package-changeset';
-import { LazyInject } from 'core-app/shared/helpers/angular/lazy-inject.decorator';
+import { lazyInject } from 'core-app/shared/helpers/angular/lazy-inject';
+import { getCSSVariable } from 'core-app/shared/helpers/dom-helpers';
 import { SchemaCacheService } from 'core-app/core/schemas/schema-cache.service';
 import { I18nService } from 'core-app/core/i18n/i18n.service';
 import { WeekdayService } from 'core-app/core/days/weekday.service';
@@ -48,6 +48,7 @@ import {
   timelineElementCssClass,
   timelineMarkerSelectionStartClass,
 } from '../wp-timeline';
+import { IOPFieldSchema } from 'core-app/features/hal/interfaces';
 
 export interface CellDateMovement {
   // Target values to move work package to
@@ -74,16 +75,16 @@ export const classNameRightHandle = 'rightHandle';
 export const classNameBarLabel = 'bar-label';
 
 export class TimelineCellRenderer {
-  @LazyInject() wpTableTimeline:WorkPackageViewTimelineService;
+  readonly wpTableTimeline = lazyInject(WorkPackageViewTimelineService, { injector: () => this.injector });
 
-  @LazyInject() weekdayService:WeekdayService;
+  readonly weekdayService = lazyInject(WeekdayService, { injector: () => this.injector });
 
-  @LazyInject() schemaCache:SchemaCacheService;
+  readonly schemaCache = lazyInject(SchemaCacheService, { injector: () => this.injector });
 
-  @LazyInject() I18n!:I18nService;
+  readonly I18n = lazyInject(I18nService, { injector: () => this.injector });
 
   public text = {
-    label_children_derived_duration: this.I18n.t('js.label_children_derived_duration'),
+    label_children_derived_duration: this.I18n().t('js.label_children_derived_duration'),
   };
 
   public ganttChartRowHeight:number;
@@ -96,9 +97,7 @@ export class TimelineCellRenderer {
 
   constructor(readonly injector:Injector,
     readonly workPackageTimeline:WorkPackageTimelineTableController) {
-    this.ganttChartRowHeight = +getComputedStyle(document.documentElement)
-      .getPropertyValue('--table-timeline--row-height')
-      .replace('px', '');
+    this.ganttChartRowHeight = +getCSSVariable('--table-timeline--row-height').replace('px', '');
   }
 
   public get type():string {
@@ -106,8 +105,8 @@ export class TimelineCellRenderer {
   }
 
   public canMoveDates(wp:WorkPackageResource):boolean {
-    const schema = this.schemaCache.of(wp);
-    return schema.startDate.writable && schema.dueDate.writable && schema.isAttributeEditable('startDate');
+    const schema = this.schemaCache().of(wp);
+    return (schema.startDate as IOPFieldSchema).writable && (schema.dueDate as IOPFieldSchema).writable && schema.isAttributeEditable('startDate');
   }
 
   public isEmpty(wp:WorkPackageResource) {
@@ -352,7 +351,7 @@ export class TimelineCellRenderer {
         break;
       }
       // Extend the duration if the currentDate is non-working
-      if (this.weekdayService.isNonWorkingDay(currentDate.toDate() || this.workPackageTimeline.isNonWorkingDay(currentDate.toDate()))) {
+      if (this.weekdayService().isNonWorkingDay(currentDate.toDate() || this.workPackageTimeline.isNonWorkingDay(currentDate.toDate()))) {
         duration += 1;
       }
     }
@@ -390,7 +389,7 @@ export class TimelineCellRenderer {
     return renderInfo.viewParams.pixelPerDay / 8;
   }
 
-  getPaddingRightForOutgoingRelationLines(renderInfo:RenderInfo):number {
+  getPaddingRightForOutgoingRelationLines(_renderInfo:RenderInfo):number {
     return 0;
   }
 
@@ -398,7 +397,7 @@ export class TimelineCellRenderer {
    * Render the generic cell element, a bar spanning from
    * start to finish date.
    */
-  public render(renderInfo:RenderInfo):HTMLDivElement {
+  public render(_renderInfo:RenderInfo):HTMLDivElement {
     const container = document.createElement('div');
     const bar = document.createElement('div');
     const left = document.createElement('div');
@@ -505,10 +504,10 @@ export class TimelineCellRenderer {
       ? [this.cursorDateAndDayOffset(evOrDates, renderInfo)[0]]
       : evOrDates;
     if (!renderInfo.workPackage.ignoreNonWorkingDays && direction === 'both'
-      && (this.weekdayService.isNonWorkingDay(dates[dates.length - 1].toDate() || this.workPackageTimeline.isNonWorkingDay(dates[dates.length - 1].toDate())))) {
+      && (this.weekdayService().isNonWorkingDay(dates[dates.length - 1].toDate() || this.workPackageTimeline.isNonWorkingDay(dates[dates.length - 1].toDate())))) {
       return false;
     }
-    return dates.some((date) => (this.weekdayService.isNonWorkingDay(date.toDate()) || this.workPackageTimeline.isNonWorkingDay(date.toDate())));
+    return dates.some((date) => (this.weekdayService().isNonWorkingDay(date.toDate()) || this.workPackageTimeline.isNonWorkingDay(date.toDate())));
   }
 
   /**
@@ -578,7 +577,7 @@ export class TimelineCellRenderer {
   protected updateLabels(activeDragNDrop:boolean,
     labels:WorkPackageCellLabels,
     change:WorkPackageChangeset) {
-    const labelConfiguration = this.wpTableTimeline.getNormalizedLabels(change.projectedResource);
+    const labelConfiguration = this.wpTableTimeline().getNormalizedLabels(change.projectedResource);
 
     if (!activeDragNDrop) {
       // normal display

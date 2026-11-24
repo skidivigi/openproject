@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -103,8 +102,8 @@ function renderFinishBy(allocation:ResourceAllocationEvent, day:string, today:st
     <div class="te-entry-card--finish-by ${allocation.finishBy === day ? 'te-entry-card--finish-by-attention' : ''}">
       ${icon(calendarIconData)}
       ${allocation.finishBy === today
-        ? I18n.t('js.resource_management.my_work.finish_today')
-        : I18n.t('js.resource_management.my_work.finish_by', { date: allocation.formattedFinishBy })}
+        ? I18n.t('js.resource_management.my_time_management.finish_today')
+        : I18n.t('js.resource_management.my_time_management.finish_by', { date: allocation.formattedFinishBy })}
     </div>`;
 }
 

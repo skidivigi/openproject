@@ -20,22 +20,20 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
 
 import { vi, type Mock } from 'vitest';
 
-import { setupStimulusTest, type StimulusTestContext } from 'core-stimulus/test-helpers';
+import { setupStimulusTest, type StimulusTestContext, stubPendingPluginContext, stubPluginContext } from 'core-stimulus/test-helpers';
 import type MatchPreviewDialogControllerType from './match-preview-dialog.controller';
 
 describe('Match preview dialog controller', () => {
   let ctx:StimulusTestContext;
   let MatchPreviewDialogController:typeof MatchPreviewDialogControllerType;
   let request:Mock;
-  let originalOpenProject:typeof window.OpenProject;
 
   beforeAll(async () => {
     ({ default: MatchPreviewDialogController } = await import('./match-preview-dialog.controller'));
@@ -45,10 +43,7 @@ describe('Match preview dialog controller', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
 
     request = vi.fn().mockResolvedValue({ html: '', headers: new Headers() });
-    originalOpenProject = window.OpenProject;
-    window.OpenProject = {
-      getPluginContext: () => Promise.resolve({ services: { turboRequests: { request } } }),
-    } as unknown as typeof window.OpenProject;
+    stubPluginContext({ services: { turboRequests: { request } } });
 
     ctx = await setupStimulusTest({
       controllers: { 'openid-connect--match-preview-dialog': MatchPreviewDialogController },
@@ -58,7 +53,6 @@ describe('Match preview dialog controller', () => {
   afterEach(() => {
     vi.useRealTimers();
     ctx.dispose();
-    window.OpenProject = originalOpenProject;
     vi.restoreAllMocks();
   });
 
@@ -99,10 +93,7 @@ describe('Match preview dialog controller', () => {
   });
 
   it('does not post when disconnected before the context resolves', async () => {
-    let resolveContext!:(context:unknown) => void;
-    window.OpenProject = {
-      getPluginContext: () => new Promise((resolve) => { resolveContext = resolve; }),
-    } as unknown as typeof window.OpenProject;
+    const resolveContext = stubPendingPluginContext();
 
     await renderDialog();
     const dialog = ctx.container.querySelector('dialog')!;

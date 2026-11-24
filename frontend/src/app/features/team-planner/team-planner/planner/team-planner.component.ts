@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -122,6 +121,8 @@ import {
   personIconData,
   toDOMString,
 } from '@openproject/octicons-angular';
+import { IOPFieldSchema } from 'core-app/features/hal/interfaces';
+import { isRecord } from 'core-app/shared/helpers/type-guards';
 
 export type TeamPlannerViewOptionKey = 'resourceTimelineWorkWeek'|'resourceTimelineWeek'|'resourceTimelineTwoWeeks'|'resourceTimelineFourWeeks'|'resourceTimelineEightWeeks';
 export type TeamPlannerViewOptions = Record<TeamPlannerViewOptionKey, RawOptionsFromRefiners<Required<ViewOptionRefiners>>>;
@@ -222,13 +223,15 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
 
   showAddAssignee$ = new BehaviorSubject<boolean>(false);
 
-  private principalIds$ = this.wpTableFilters
+  protected principalIds$ = this.wpTableFilters
     .live$()
     .pipe(
       this.untilDestroyed(),
       map((queryFilters) => {
         const assigneeFilter = queryFilters.find((queryFilter) => queryFilter.id === 'assignee');
-        return ((assigneeFilter?.values || []) as HalResource[]).map((p) => p.id);
+        return ((assigneeFilter?.values ?? []) as HalResource[])
+          .map((principal) => principal.id)
+          .filter((id) => id !== null);
       }),
     );
 
@@ -281,10 +284,10 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
     .pipe(
       this.untilDestroyed(),
       filter((ids) => ids.length > 0),
-      map((ids) => ({
+      map((ids):ApiV3ListParameters => ({
         filters: [['id', '=', ids]],
         pageSize: MAGIC_PAGE_NUMBER,
-      }) as ApiV3ListParameters),
+      })),
     );
 
   isEmpty$ = combineLatest([
@@ -740,7 +743,7 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
   }
 
   isStatusClosed(workPackage:WorkPackageResource):boolean {
-    const status = this.statuses.find((el) => el.id === (workPackage.status as StatusResource).id);
+    const status = this.statuses.find((el) => el.id === workPackage.status.id);
 
     return status ? status.isClosed : false;
   }
@@ -809,10 +812,21 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
 
   // Allow triggering the select from a event, as
   // this is otherwise not testable from selenium
-  @HostListener(
-    'document:teamPlannerSelectDate',
-    ['$event.detail.start', '$event.detail.end', '$event.detail.assignee'],
-  )
+  @HostListener('document:teamPlannerSelectDate', ['$event'])
+  selectDateFromEvent(event:Event):void {
+    if (!(event instanceof CustomEvent)) {
+      return;
+    }
+
+    const detail:unknown = event.detail;
+    if (isRecord(detail)
+      && typeof detail.start === 'string'
+      && typeof detail.end === 'string'
+      && typeof detail.assignee === 'string') {
+      this.openNewSplitCreate(detail.start, detail.end, detail.assignee);
+    }
+  }
+
   openNewSplitCreate(start:string, end:string, resourceHref:string, nonWorkingDays?:boolean):void {
     const basePath = this.urlParams.basePathWithoutDetails();
     const search = new URLSearchParams(window.location.search);
@@ -835,7 +849,7 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
     }
   }
 
-  onCardClicked({ workPackageId, event }:{ workPackageId:string, event:MouseEvent }):void {
+  onCardClicked({ workPackageId, event }:{ workPackageId:string, event:MouseEvent|KeyboardEvent }):void {
     this.workPackagesCalendar.onCardClicked({ workPackageId, event });
   }
 
@@ -866,7 +880,7 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
       await this.halEditing.save(changeset);
     } catch (e:unknown) {
       this.loading$?.complete();
-      this.halNotification.showError((e as HalError).resource, changeset.projectedResource);
+      this.halNotification.showError((e as HalError).resource!, changeset.projectedResource);
       this.calendarDrag.handleDropError(changeset.projectedResource);
       info?.revert();
     }
@@ -874,8 +888,7 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
 
   private eventResourceEditable(wp:WorkPackageResource):boolean {
     const schema = this.schemaCache.of(wp);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    return !!schema.assignee?.writable && schema.isAttributeEditable('assignee');
+    return !!(schema.assignee as IOPFieldSchema|undefined)?.writable && schema.isAttributeEditable('assignee');
   }
 
   // Todo: Evaluate whether we really want to use that from a UI perspective ¯\_(ツ)_/¯
@@ -899,7 +912,7 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
       return constraints;
     }
 
-    const assignables = projectAssignables[(wp.project as HalResource).href!];
+    const assignables = projectAssignables[wp.project.href!];
     if (assignables) {
       constraints.resourceIds = [...assignables];
     }
@@ -917,7 +930,7 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
   }
 
   private wpAssignee(wp:WorkPackageResource):string {
-    return (wp.assignee as HalResource).href!;
+    return wp.assignee!.href!;
   }
 
   private toggleAddExistingPane():void {
@@ -945,7 +958,7 @@ export class TeamPlannerComponent extends UntilDestroyedMixin implements OnInit,
       .pipe(
         filter((el) => Object.keys(el).length > 0),
         take(1),
-        map((projectAssignables) => projectAssignables[(wp.project as HalResource).href!]),
+        map((projectAssignables) => projectAssignables[wp.project.href!]),
         withLatestFrom(this.principals$),
       )
       .subscribe(([assignable, principals]) => {

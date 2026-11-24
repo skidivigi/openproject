@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -30,7 +29,7 @@ import { autoScrollForElements } from '@atlaskit/pragmatic-drag-and-drop-auto-sc
 import { Controller } from '@hotwired/stimulus';
 import {
   isItemFromRoot,
-  type RootAwareChild,
+  type RegisteredRootAwareChild,
   type SortableListsRoot,
 } from './drag-and-drop';
 
@@ -41,7 +40,7 @@ type AutoScrollMaxScrollSpeed = 'standard'|'fast';
 const allowedAxes = new Set<string>(['vertical', 'horizontal', 'all']);
 const maxScrollSpeeds = new Set<string>(['standard', 'fast']);
 
-export default class ScrollableController extends Controller<HTMLElement> implements RootAwareChild {
+export default class ScrollableController extends Controller<HTMLElement> implements RegisteredRootAwareChild {
   static values = {
     allowedAxis: { type: String, default: 'vertical' },
     maxScrollSpeed: { type: String, default: 'standard' },

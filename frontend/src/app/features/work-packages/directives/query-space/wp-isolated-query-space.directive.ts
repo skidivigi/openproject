@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -106,7 +105,6 @@ import {
 import {
   WorkPackageViewOrderService,
 } from 'core-app/features/work-packages/routing/wp-view-base/view-services/wp-view-order.service';
-import { CausedUpdatesService } from 'core-app/features/boards/board/caused-updates/caused-updates.service';
 import {
   WorkPackageCardViewService,
 } from 'core-app/features/work-packages/components/wp-card-view/services/wp-card-view.service';
@@ -173,7 +171,6 @@ import {
     WorkPackageViewOrderService,
     WorkPackageViewHierarchyIdentationService,
     WorkPackageViewBaselineService,
-    CausedUpdatesService,
 
     WorkPackageService,
     WorkPackageRelationsHierarchyService,

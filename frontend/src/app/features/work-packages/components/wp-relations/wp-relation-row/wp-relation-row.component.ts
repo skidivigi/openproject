@@ -20,8 +20,7 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with this program; if not, write to the Free Software
-// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
 //
 // See COPYRIGHT and LICENSE files for more details.
 //++
@@ -37,6 +36,7 @@ import { ApiV3Service } from 'core-app/core/apiv3/api-v3.service';
 import { RelationResource } from 'core-app/features/hal/resources/relation-resource';
 import { WorkPackageRelationsService } from '../wp-relations.service';
 import { Highlighting } from 'core-app/features/work-packages/components/wp-fast-table/builders/highlighting/highlighting.functions';
+import { EditFieldControl } from 'core-app/shared/components/fields/edit/field-controls/edit-field-controls.component';
 import { ProjectResource } from 'core-app/features/hal/resources/project-resource';
 
 
@@ -84,13 +84,7 @@ export class WorkPackageRelationRowComponent extends UntilDestroyedMixin impleme
     showRelationInfo: false,
   };
 
-  // Create a quasi-field object
-  public fieldController = {
-    handler: {
-      active: true,
-    },
-    required: false,
-  };
+  public fieldController:EditFieldControl = { required: false };
 
   public relation:RelationResource;
 
@@ -98,7 +92,6 @@ export class WorkPackageRelationRowComponent extends UntilDestroyedMixin impleme
     cancel: this.I18n.t('js.button_cancel'),
     save: this.I18n.t('js.button_save'),
     removeButton: this.I18n.t('js.relation_buttons.remove'),
-    description_label: this.I18n.t('js.relation_buttons.update_description'),
     toggleDescription: this.I18n.t('js.relation_buttons.toggle_description'),
     updateRelation: this.I18n.t('js.relation_buttons.update_relation'),
     placeholder: {
@@ -187,7 +180,7 @@ export class WorkPackageRelationRowComponent extends UntilDestroyedMixin impleme
     }
   }
 
-  public cancelRelationTypeEditOnEscape(evt:KeyboardEvent) {
+  public cancelRelationTypeEditOnEscape() {
     this.userInputs.showRelationTypesForm = false;
   }
 
@@ -206,7 +199,7 @@ export class WorkPackageRelationRowComponent extends UntilDestroyedMixin impleme
         this.userInputs.showRelationTypesForm = false;
         this.cdRef.detectChanges();
       })
-      .catch((error:any) => this.notificationService.handleRawError(error, this.workPackage));
+      .catch((error:unknown) => this.notificationService.handleRawError(error, this.workPackage));
   }
 
   public toggleUserDescriptionForm() {
@@ -232,7 +225,7 @@ export class WorkPackageRelationRowComponent extends UntilDestroyedMixin impleme
 
         this.notificationService.showSave(this.relatedWorkPackage);
       })
-      .catch((err:any) => this.notificationService.handleRawError(err,
+      .catch((err:unknown) => this.notificationService.handleRawError(err,
         this.relatedWorkPackage));
   }
 
